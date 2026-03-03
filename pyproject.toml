@@ -6,8 +6,12 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
 authors = [
-    {name = "Your Name", email = "your.email@example.com"},
+    {name = "Paradex", email = "support@paradex.trade"},
 ]
+
+[project.urls]
+Repository = "https://github.com/tradeparadex/mcp-paradex-py"
+"Bug Tracker" = "https://github.com/tradeparadex/mcp-paradex-py/issues"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",

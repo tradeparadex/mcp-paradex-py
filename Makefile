@@ -1,4 +1,4 @@
-.PHONY: format lint typecheck install-dev pre-commit clean test test-cov
+.PHONY: format lint typecheck install-dev pre-commit clean test test-cov build publish
 
 # Install development dependencies
 install-dev:
@@ -31,6 +31,14 @@ check: format lint typecheck test
 # Run pre-commit on all files
 pre-commit:
 	pre-commit run --all-files
+
+# Build the package
+build:
+	uv build
+
+# Publish to PyPI using trusted publishing (requires PYPI_TOKEN or trusted publisher config)
+publish: build
+	uv publish
 
 # Clean up cache files
 clean:

@@ -1,18 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.sv/mcp-paradex-py",
+  "name": "io.github.tradeparadex/mcp-paradex-py",
   "title": "Paradex Trading",
   "description": "MCP server for the Paradex perpetual futures trading platform. Provides market data, account management, order placement, position monitoring, and vault operations.",
   "repository": {
-    "url": "https://github.com/sv/mcp-paradex-py",
+    "url": "https://github.com/tradeparadex/mcp-paradex-py",
     "source": "github"
   },
-  "version": "0.1.1",
+  "version": "0.1.2",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "mcp-paradex",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "transport": {
         "type": "stdio"
       },

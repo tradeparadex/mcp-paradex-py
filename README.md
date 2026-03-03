@@ -1,8 +1,8 @@
 # MCP Paradex Server
 
-<!-- mcp-name: io.github.sv/mcp-paradex-py -->
+<!-- mcp-name: io.github.tradeparadex/mcp-paradex-py -->
 
-[![smithery badge](https://smithery.ai/badge/@sv/mcp-paradex-py)](https://smithery.ai/server/@sv/mcp-paradex-py)
+[![smithery badge](https://smithery.ai/badge/@tradeparadex/mcp-paradex-py)](https://smithery.ai/server/@tradeparadex/mcp-paradex-py)
 
 Model Context Protocol (MCP) server implementation for the Paradex trading platform.
 
@@ -44,7 +44,7 @@ claude mcp add paradex uvx mcp-paradex
 #### Smithery (Claude Desktop)
 
 ```bash
-npx -y @smithery/cli install @sv/mcp-paradex-py --client claude
+npx -y @smithery/cli install @tradeparadex/mcp-paradex-py --client claude
 ```
 
 ### Standard Installation
@@ -66,7 +66,7 @@ uvx mcp-paradex
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/sv/mcp-paradex-py.git
+   git clone https://github.com/tradeparadex/mcp-paradex-py.git
    cd mcp-paradex-py
    ```
 
@@ -123,13 +123,13 @@ Add to your `claude_desktop_config.json`:
 
 ```bash
 # Build image
-docker build . -t sv/mcp-paradex-py
+docker build . -t tradeparadex/mcp-paradex-py
 
 # Run (public only)
-docker run --rm -i sv/mcp-paradex-py
+docker run --rm -i tradeparadex/mcp-paradex-py
 
 # Run with trading capabilities
-docker run --rm -e PARADEX_ACCOUNT_PRIVATE_KEY=your_key -i sv/mcp-paradex-py
+docker run --rm -e PARADEX_ACCOUNT_PRIVATE_KEY=your_key -i tradeparadex/mcp-paradex-py
 ```
 
 #### Docker (AWS Lambda / HTTP)
@@ -141,7 +141,7 @@ so no Lambda-specific code is needed.
 
 ```bash
 # Build
-docker build -f Dockerfile.aws -t sv/mcp-paradex-py-aws .
+docker build -f Dockerfile.aws -t tradeparadex/mcp-paradex-py-aws .
 
 # Test locally (mirrors Lambda config)
 docker run --rm -p 8080:8080 \
@@ -149,7 +149,7 @@ docker run --rm -p 8080:8080 \
   -e MCP_STATELESS=true \
   -e MCP_PORT=8080 \
   -e PARADEX_ENVIRONMENT=prod \
-  sv/mcp-paradex-py-aws
+  tradeparadex/mcp-paradex-py-aws
 ```
 
 The server will be available at `http://localhost:8080/mcp`.
