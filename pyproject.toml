@@ -9,9 +9,6 @@ authors = [
     {name = "Paradex", email = "support@paradex.trade"},
 ]
 
-[project.urls]
-Repository = "https://github.com/tradeparadex/mcp-paradex-py"
-"Bug Tracker" = "https://github.com/tradeparadex/mcp-paradex-py/issues"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -21,6 +18,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
 ]
+
 dependencies = [
     "mcp[cli]>=1.26.0",
     "paradex-py>=0.5.5",
@@ -30,6 +28,10 @@ dependencies = [
     "aiohttp>=3.12.0",
     "jmespath>=1.0.1",
 ]
+
+[project.urls]
+Repository = "https://github.com/tradeparadex/mcp-paradex-py"
+"Bug Tracker" = "https://github.com/tradeparadex/mcp-paradex-py/issues"
 
 [project.optional-dependencies]
 dev = [
