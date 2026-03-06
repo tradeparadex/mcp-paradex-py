@@ -6,24 +6,90 @@ import argparse
 import logging
 import os
 import sys
+import time
+from contextvars import ContextVar
 from typing import Any
 
 from mcp.server.fastmcp.server import FastMCP
 from mcp.server.transport_security import TransportSecuritySettings
-from starlette.requests import Request
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 from mcp_paradex import __version__
 from mcp_paradex.utils.config import config
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler()],
+# Context variable holding the MCP-Session-Id for the current request.
+# Defaults to "-" so log records outside a request context are still valid.
+session_id_ctx: ContextVar[str] = ContextVar("session_id", default="-")
+
+
+class _SessionIdFilter(logging.Filter):
+    """Injects session_id from context into every log record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.session_id = session_id_ctx.get()  # type: ignore[attr-defined]
+        return True
+
+
+# Configure logging — include session= so all modules get correlation for free.
+_handler = logging.StreamHandler()
+_handler.addFilter(_SessionIdFilter())
+_handler.setFormatter(
+    logging.Formatter("%(asctime)s %(name)s %(levelname)s session=%(session_id)s %(message)s")
 )
+logging.basicConfig(level=logging.INFO, handlers=[_handler], force=True)
 logger = logging.getLogger("mcp-paradex")
+
+
+class RequestTracingMiddleware:
+    """
+    Extracts MCP-Session-Id from the request header and stores it in a
+    ContextVar so every log line emitted during that request is tagged with
+    session=<id>.  Also logs request/response with wall-clock timing.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = {k.lower(): v for k, v in scope.get("headers", [])}
+        session_id = headers.get(b"mcp-session-id", b"").decode() or "-"
+        token = session_id_ctx.set(session_id)
+        method = scope["method"]
+        path = scope["path"]
+        t0 = time.monotonic()
+        logger.info("request method=%s path=%s", method, path)
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            logger.info(
+                "response method=%s path=%s ms=%.0f",
+                method,
+                path,
+                (time.monotonic() - t0) * 1000,
+            )
+            session_id_ctx.reset(token)
+
+
+class HealthMiddleware:
+    """
+    Handles GET /health with 200 OK so Lambda Web Adapter readiness checks pass.
+    All other requests (including lifespan) are forwarded to the inner app unchanged.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope["path"] == "/health":
+            response = JSONResponse({"status": "ok"})
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
 
 
 class RejectGetMiddleware:
@@ -124,7 +190,8 @@ def run_cli() -> None:
             server.settings.transport_security = TransportSecuritySettings(
                 enable_dns_rebinding_protection=False
             )
-            starlette_app = server.streamable_http_app()
+            starlette_app: ASGIApp = server.streamable_http_app()
+            starlette_app = HealthMiddleware(starlette_app)
             if args.stateless:
                 # Wrap with middleware that rejects GET requests.
                 # In stateless mode GET /mcp would open a persistent SSE stream
@@ -132,6 +199,8 @@ def run_cli() -> None:
                 starlette_app = RejectGetMiddleware(
                     starlette_app, mcp_path=server.settings.streamable_http_path
                 )
+            # Outermost: extract MCP-Session-Id and log request/response timing.
+            starlette_app = RequestTracingMiddleware(starlette_app)
 
             import anyio
 

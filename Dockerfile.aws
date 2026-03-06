@@ -50,6 +50,7 @@ ENV PYTHONPATH="/app/.venv/lib/python3.12/site-packages:/app/src"
 ENV PORT=8080
 ENV AWS_LAMBDA_EXEC_WRAPPER=/opt/extensions/lambda-adapter
 ENV AWS_LWA_INVOKE_MODE=response_stream
+ENV AWS_LWA_READINESS_CHECK_PATH=/health
 
 # Default: stdio (for local use / Claude Desktop).
 # For Lambda / remote HTTP: MCP_TRANSPORT=streamable-http MCP_STATELESS=true via env vars.
