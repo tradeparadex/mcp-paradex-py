@@ -28,8 +28,6 @@ FROM python:3.12-slim-bookworm
 # on $PORT, so the app needs no Lambda-specific code.
 COPY --from=public.ecr.aws/awsguru/aws-lambda-adapter:1.0.0-rc1 /lambda-adapter /opt/extensions/lambda-adapter
 
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
 COPY --from=uv /app/.venv /app/.venv
