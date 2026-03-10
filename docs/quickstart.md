@@ -1,0 +1,350 @@
+# Quickstart Guide
+
+This guide helps you connect the Paradex MCP server to your AI assistant in minutes.
+
+## Step 1 — Get Your Paradex Private Key
+
+All trading features require a Paradex account private key. Public market data works without one.
+
+1. Go to [Paradex](https://app.paradex.trade) and connect your wallet
+2. Navigate to **Settings → API Keys** and create a new key
+3. Copy the private key — you'll need it in the steps below
+
+> **Testnet first?** Use `PARADEX_ENVIRONMENT=testnet` and get test funds from the Paradex testnet faucet.
+
+---
+
+## Step 2 — Pick Your Client
+
+| Client | Supported | Notes |
+|---|---|---|
+| **Claude Desktop** (app) | ✅ | Best experience, full tool support |
+| **Claude Code** (CLI) | ✅ | One-line setup |
+| **Cursor** | ✅ | One-click install available |
+| **Windsurf** | ✅ | Manual JSON config |
+| **VS Code (GitHub Copilot)** | ✅ | Via `.vscode/mcp.json` |
+| **Claude.ai** (web) | ✅ | Requires remote HTTP server |
+| **ChatGPT Desktop** | ✅ | Via ngrok tunnel, AWS Lambda, or Agents SDK |
+| **Gemini CLI** | ✅ | Via `~/.gemini/settings.json` |
+| **OpenAI Codex CLI** | ✅ | Via `~/.codex/config.toml` |
+| **ChatGPT web** | ❌ | Does not support MCP |
+
+---
+
+## Claude Desktop
+
+**Fastest path:** use Smithery to install automatically:
+
+```bash
+npx -y @smithery/cli install @tradeparadex/mcp-paradex-py --client claude
+```
+
+**Manual setup:**
+
+1. Find your config file:
+   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+2. Add the Paradex server (create the file if it doesn't exist):
+
+```json
+{
+  "mcpServers": {
+    "paradex": {
+      "command": "uvx",
+      "args": ["mcp-paradex"],
+      "env": {
+        "PARADEX_ENVIRONMENT": "prod",
+        "PARADEX_ACCOUNT_PRIVATE_KEY": "your_private_key_here"
+      }
+    }
+  }
+}
+```
+
+3. Restart Claude Desktop. You should see a hammer icon (🔨) indicating MCP tools are available.
+
+> **Don't have `uvx`?** Install it with `pip install uv` or from [astral.sh/uv](https://astral.sh/uv).
+
+---
+
+## Claude Code (CLI)
+
+Run this single command in your terminal:
+
+```bash
+claude mcp add paradex uvx mcp-paradex
+```
+
+Then set your credentials:
+
+```bash
+claude mcp add paradex uvx mcp-paradex \
+  -e PARADEX_ENVIRONMENT=prod \
+  -e PARADEX_ACCOUNT_PRIVATE_KEY=your_private_key_here
+```
+
+Verify it's working:
+
+```bash
+claude mcp list
+```
+
+---
+
+## Cursor
+
+**One-click install** (automatically configures everything):
+
+[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.svg)](https://cursor.com/install-mcp?name=paradex&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJtY3AtcGFyYWRleCJdLCJlbnYiOnsiUEFSQURFWF9FTlZJUk9OTUVOVCI6InRlc3RuZXQiLCJQQVJBREVYX0FDQ09VTlRfUFJJVkFURV9LRVkiOiJ5b3VyX3ByaXZhdGVfa2V5In19Cg%3D%3D)
+
+**Manual setup:**
+
+Open Cursor **Settings → MCP** and add:
+
+```json
+{
+  "paradex": {
+    "command": "uvx",
+    "args": ["mcp-paradex"],
+    "env": {
+      "PARADEX_ENVIRONMENT": "prod",
+      "PARADEX_ACCOUNT_PRIVATE_KEY": "your_private_key_here"
+    }
+  }
+}
+```
+
+---
+
+## Windsurf
+
+Open **Windsurf Settings → MCP Servers** and add to `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "paradex": {
+      "command": "uvx",
+      "args": ["mcp-paradex"],
+      "env": {
+        "PARADEX_ENVIRONMENT": "prod",
+        "PARADEX_ACCOUNT_PRIVATE_KEY": "your_private_key_here"
+      }
+    }
+  }
+}
+```
+
+Restart Windsurf to apply changes.
+
+---
+
+## VS Code (GitHub Copilot)
+
+Add a `.vscode/mcp.json` file to your workspace:
+
+```json
+{
+  "servers": {
+    "paradex": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-paradex"],
+      "env": {
+        "PARADEX_ENVIRONMENT": "prod",
+        "PARADEX_ACCOUNT_PRIVATE_KEY": "your_private_key_here"
+      }
+    }
+  }
+}
+```
+
+Reload VS Code. The tools will appear in Copilot Chat.
+
+---
+
+## Claude.ai Web
+
+Claude.ai web requires a **remote HTTP server** (it cannot run a local process on your machine).
+
+See the **[HTTP deployment guide](deploy-http.md)** for options: Railway, Render, Fly.io, AWS Lambda, or Docker on a VPS.
+
+Once deployed, add the endpoint in **Claude.ai → Settings → Integrations → Add MCP Server**.
+
+---
+
+## ChatGPT Desktop
+
+ChatGPT Desktop requires a **remote HTTP server** and **Developer Mode** enabled.
+It cannot launch a local process like Claude Desktop can.
+
+Choose the option that fits your situation:
+
+### Option A — ngrok tunnel (no cloud account, good for trying it out)
+
+1. Install dependencies:
+   ```bash
+   pip install uv
+   brew install ngrok   # macOS; or download from ngrok.com
+   ```
+
+2. Start the MCP server locally:
+   ```bash
+   MCP_TRANSPORT=streamable-http MCP_PORT=8080 \
+   PARADEX_ENVIRONMENT=prod \
+   PARADEX_ACCOUNT_PRIVATE_KEY=your_private_key_here \
+   uvx mcp-paradex
+   ```
+
+3. In a second terminal, open a tunnel:
+   ```bash
+   ngrok http 8080
+   ```
+   Copy the `https://xxxx.ngrok.io` URL.
+
+4. In ChatGPT Desktop: **Settings → Advanced → Developer Mode** (enable), then **Settings → Connectors → Create**, paste `https://xxxx.ngrok.io/mcp`.
+
+> **Limitation:** The tunnel URL changes every time you restart ngrok (free tier). Update the connector URL each session.
+
+### Option B — Permanent remote endpoint (recommended for daily use)
+
+Deploy a persistent HTTPS endpoint and register it once — no maintenance needed.
+
+See the **[HTTP deployment guide](deploy-http.md)** for step-by-step instructions for:
+- **Railway** — easiest, ~$5/mo, auto-deploys from GitHub
+- **Render** — free tier available, easy setup
+- **Fly.io** — more control, global regions
+- **AWS Lambda** — pay-per-request, no idle cost
+- **Docker on a VPS** — full control
+
+Once you have a URL, add it in **ChatGPT → Settings → Connectors → Create**.
+
+### Option C — OpenAI Agents SDK (for developers building apps or scripts)
+
+No remote server needed — the SDK spawns the MCP server as a local subprocess.
+
+```bash
+pip install openai-agents
+```
+
+```python
+import asyncio, os
+from agents import Agent, Runner
+from agents.mcp import MCPServerStdio
+
+async def main():
+    async with MCPServerStdio(
+        name="paradex",
+        params={
+            "command": "uvx",
+            "args": ["mcp-paradex"],
+            "env": {
+                **os.environ,
+                "PARADEX_ENVIRONMENT": "prod",
+                "PARADEX_ACCOUNT_PRIVATE_KEY": "your_private_key_here",
+            },
+        },
+    ) as server:
+        agent = Agent(
+            name="Paradex Trader",
+            instructions="You are a trading assistant with access to Paradex.",
+            mcp_servers=[server],
+        )
+        result = await Runner.run(agent, "What are the top markets by volume?")
+        print(result.final_output)
+
+asyncio.run(main())
+```
+
+---
+
+## Gemini CLI
+
+Gemini CLI reads MCP server config from `~/.gemini/settings.json` (global) or `.gemini/settings.json` in your project directory.
+
+Add the `mcpServers` block:
+
+```json
+{
+  "mcpServers": {
+    "paradex": {
+      "command": "uvx",
+      "args": ["mcp-paradex"],
+      "env": {
+        "PARADEX_ENVIRONMENT": "prod",
+        "PARADEX_ACCOUNT_PRIVATE_KEY": "$PARADEX_ACCOUNT_PRIVATE_KEY"
+      }
+    }
+  }
+}
+```
+
+The `$VAR_NAME` syntax reads from your shell environment at runtime — this keeps your private key out of the config file.
+
+Set your key in your shell before running Gemini CLI:
+
+```bash
+export PARADEX_ACCOUNT_PRIVATE_KEY=your_private_key_here
+gemini
+```
+
+Manage servers during a session with `/mcp enable paradex` or `/mcp disable paradex`.
+
+---
+
+## OpenAI Codex CLI
+
+Codex CLI reads MCP config from `~/.codex/config.toml` (global) or `.codex/config.toml` in your project directory.
+
+**Add via CLI command:**
+
+```bash
+codex mcp add paradex -- uvx mcp-paradex
+```
+
+**Or edit `~/.codex/config.toml` manually:**
+
+```toml
+[mcp_servers.paradex]
+command = "uvx"
+args = ["mcp-paradex"]
+env = { PARADEX_ENVIRONMENT = "prod", PARADEX_ACCOUNT_PRIVATE_KEY = "your_private_key_here" }
+```
+
+The config is shared between the Codex CLI and the Codex VS Code extension — configure once and both clients pick it up.
+
+---
+
+## Verify It's Working
+
+Once connected, ask your AI assistant:
+
+> "What markets are available on Paradex?"
+
+If you get a list of trading pairs, you're all set. To test trading access:
+
+> "Show me my Paradex account summary."
+
+---
+
+## Troubleshooting
+
+**Tools not appearing / MCP not loading**
+- Make sure `uvx` is installed: `uvx --version`
+- Check that the config file has valid JSON (no trailing commas)
+- Restart the client after config changes
+
+**Authentication errors**
+- Double-check your private key is correct and starts with `0x`
+- Verify `PARADEX_ENVIRONMENT` matches where your account was created (`prod` or `testnet`)
+
+**`uvx: command not found`**
+```bash
+pip install uv
+# or on macOS:
+brew install uv
+```
+
+**Want to test without a private key first?**
+Market data tools work without any credentials. Just omit `PARADEX_ACCOUNT_PRIVATE_KEY` from the config.

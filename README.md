@@ -10,6 +10,12 @@ Model Context Protocol (MCP) server implementation for the Paradex trading platf
   <img width="380" height="200" src="https://glama.ai/mcp/servers/cq4bz5ljqj/badge" alt="Paradex Server MCP server" />
 </a>
 
+## Quickstart
+
+New here? See the **[Quickstart Guide](docs/quickstart.md)** for step-by-step setup instructions for Claude Desktop, Claude Code, Cursor, Windsurf, VS Code, Claude.ai web, and ChatGPT.
+
+Need a remote HTTP endpoint for ChatGPT or Claude.ai web? See the **[HTTP Deployment Guide](docs/deploy-http.md)** for Railway, Render, Fly.io, AWS Lambda, and Docker/VPS options.
+
 ## Overview
 
 This project provides a bridge between AI assistants (like Claude) and the
