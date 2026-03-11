@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.tradeparadex/mcp-paradex-py -->
 
-[![smithery badge](https://smithery.ai/badge/@tradeparadex/mcp-paradex-py)](https://smithery.ai/server/@tradeparadex/mcp-paradex-py)
+[![smithery badge](https://smithery.ai/badge/tradeparadex/mcp-paradex-py)](https://smithery.ai/servers/tradeparadex/mcp-paradex-py)
 
 Model Context Protocol (MCP) server implementation for the Paradex trading platform.
 
@@ -50,7 +50,7 @@ claude mcp add paradex uvx mcp-paradex
 #### Smithery (Claude Desktop)
 
 ```bash
-npx -y @smithery/cli install @tradeparadex/mcp-paradex-py --client claude
+npx -y @smithery/cli@latest mcp add @tradeparadex/mcp-paradex-py --client claude
 ```
 
 ### Standard Installation

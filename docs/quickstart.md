@@ -36,7 +36,7 @@ All trading features require a Paradex account private key. Public market data w
 **Fastest path:** use Smithery to install automatically:
 
 ```bash
-npx -y @smithery/cli install @tradeparadex/mcp-paradex-py --client claude
+npx -y @smithery/cli@latest mcp add @tradeparadex/mcp-paradex-py --client claude
 ```
 
 **Manual setup:**
