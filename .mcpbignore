@@ -1,0 +1,31 @@
+# Virtual environments and caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+htmlcov/
+
+# Git and CI
+.git/
+.github/
+
+# Development files
+tests/
+docs/
+docker/
+Dockerfile*
+Makefile
+.pre-commit-config.yaml
+.claude/
+
+# Secrets and local config
+.env
+.env.*
+
+# Build artifacts
+dist/
+build/
+*.mcpb
