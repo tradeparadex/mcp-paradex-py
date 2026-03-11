@@ -16,10 +16,18 @@ htmlcov/
 tests/
 docs/
 docker/
+prompts/
 Dockerfile*
 Makefile
 .pre-commit-config.yaml
 .claude/
+.vscode/
+CONTRIBUTING.md
+CLAUDE.md
+smithery.yaml
+server.json
+mcp-testing-framework.yaml
+uv.lock
 
 # Secrets and local config
 .env
