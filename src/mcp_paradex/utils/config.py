@@ -31,12 +31,20 @@ class Config:
     PARADEX_ACCOUNT_ADDRESS: str | None = os.getenv("PARADEX_ACCOUNT_ADDRESS")
     PARADEX_ACCOUNT_PRIVATE_KEY: str | None = os.getenv("PARADEX_ACCOUNT_PRIVATE_KEY")
 
+    # JWT-based auth (alternative to private key)
+    PARADEX_JWT_TOKEN: str | None = os.getenv("PARADEX_JWT_TOKEN")
+    # OAuth Resource Server config (for HTTP mode)
+    MCP_SERVER_URL: str | None = os.getenv("MCP_SERVER_URL")
+    PARADEX_AUTH_SERVER_URL: str | None = os.getenv("PARADEX_AUTH_SERVER_URL")
+
     @classmethod
     def is_configured(cls) -> bool:
         """Check if all required configuration is set."""
-        return all(
+        return any(
             [
                 cls.PARADEX_ACCOUNT_PRIVATE_KEY is not None,
+                cls.PARADEX_JWT_TOKEN is not None,
+                cls.PARADEX_AUTH_SERVER_URL is not None,
             ]
         )
 

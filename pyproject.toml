@@ -21,12 +21,13 @@ classifiers = [
 
 dependencies = [
     "mcp[cli]>=1.26.0",
-    "paradex-py>=0.5.5",
+    "paradex-py>=0.5.6rc1",
     "pydantic>=2.11.0",
     "uvicorn>=0.35.0",
     "python-dotenv>=1.0.1",
     "aiohttp>=3.12.0",
     "jmespath>=1.0.1",
+    "typing-extensions>=4.13.0",
 ]
 
 [project.urls]
@@ -138,6 +139,7 @@ ignore_errors = true
 # mcp>=1.26 requires pywin32>=310 on Windows, paradex-py requires pywin32==306 via starknet-py.
 # This project targets Linux/macOS only, so we restrict the resolution environments accordingly.
 environments = ["sys_platform != 'win32'"]
+prerelease = "if-necessary-or-explicit"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
