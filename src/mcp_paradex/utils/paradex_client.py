@@ -10,6 +10,7 @@ from typing import Any
 
 import httpx
 from paradex_py.account.account import ParadexAccount
+from paradex_py.account.subkey_account import SubkeyAccount
 from paradex_py.api.api_client import ParadexApiClient
 
 from mcp_paradex.utils.config import config
@@ -73,13 +74,24 @@ async def get_paradex_client() -> ParadexApiClient:
         logger.info("Paradex client api_url=%s", _paradex_client.api_url)
 
         if config.PARADEX_ACCOUNT_PRIVATE_KEY:
-            logger.info("Authenticating Paradex client via private key")
             response = _paradex_client.fetch_system_config()
-            acc = ParadexAccount(
-                config=response,
-                l1_address="0x0000000000000000000000000000000000000000",
-                l2_private_key=config.PARADEX_ACCOUNT_PRIVATE_KEY,
-            )
+            if config.PARADEX_ACCOUNT_ADDRESS:
+                # Use SubkeyAccount for any L2 key + address pair.
+                # Works for both main account keys and registered subkeys
+                # (same pattern as the SDK's ParadexL2 high-level client).
+                logger.info("Authenticating Paradex client via L2 key + address")
+                acc: ParadexAccount = SubkeyAccount(
+                    config=response,
+                    l2_private_key=config.PARADEX_ACCOUNT_PRIVATE_KEY,
+                    l2_address=config.PARADEX_ACCOUNT_ADDRESS,
+                )
+            else:
+                logger.info("Authenticating Paradex client via private key")
+                acc = ParadexAccount(
+                    config=response,
+                    l1_address="0x0000000000000000000000000000000000000000",
+                    l2_private_key=config.PARADEX_ACCOUNT_PRIVATE_KEY,
+                )
             _paradex_client.init_account(acc)
             logger.info("Paradex client authenticated account=%s", _paradex_client.account)
         elif config.PARADEX_JWT_TOKEN:
