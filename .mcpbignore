@@ -16,6 +16,7 @@ htmlcov/
 tests/
 docs/
 docker/
+spec/
 /prompts/
 Dockerfile*
 Makefile
@@ -32,6 +33,11 @@ uv.lock
 # Secrets and local config
 .env
 .env.*
+.mcpregistry_*
+
+# Test / coverage artifacts
+.coverage
+coverage.xml
 
 # Build artifacts
 dist/
