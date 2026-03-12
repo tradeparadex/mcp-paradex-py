@@ -1,0 +1,178 @@
+{
+  "manifest_version": "0.4",
+  "name": "mcp-paradex",
+  "display_name": "Paradex Trading",
+  "version": "0.1.2",
+  "description": "MCP server for Paradex perpetual futures trading platform — market data, account management, order placement, and vault operations.",
+  "long_description": "Connect AI assistants to the Paradex decentralized perpetual futures exchange. Access real-time market data including orderbooks, trades, funding rates, and klines. Monitor account positions, balances, and transaction history. Place and manage orders with support for market, limit, stop, and take-profit order types. Track vault performance, positions, and transfers. Supports both read-only market data access and authenticated trading when configured with account credentials.",
+  "author": {
+    "name": "Paradex",
+    "email": "support@paradex.trade",
+    "url": "https://www.paradex.trade"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tradeparadex/mcp-paradex-py"
+  },
+  "homepage": "https://github.com/tradeparadex/mcp-paradex-py",
+  "support": "https://github.com/tradeparadex/mcp-paradex-py/issues",
+  "server": {
+    "type": "uv",
+    "entry_point": "src/mcp_paradex/__main__.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${__dirname}",
+        "python",
+        "src/mcp_paradex/__main__.py"
+      ],
+      "env": {
+        "PARADEX_ENVIRONMENT": "prod",
+        "PARADEX_ACCOUNT_PRIVATE_KEY": "${user_config.paradex_account_private_key}",
+        "PARADEX_ACCOUNT_ADDRESS": "${user_config.paradex_account_address}"
+      }
+    }
+  },
+  "tools": [
+    {
+      "name": "paradex_system_config",
+      "description": "Get Paradex system configuration including exchange parameters, fee schedules, and trading limits."
+    },
+    {
+      "name": "paradex_system_state",
+      "description": "Get the current Paradex system operational status and server timestamp."
+    },
+    {
+      "name": "paradex_filters_model",
+      "description": "Get JSON schema for data models used in JMESPath filtering (MarketDetails, MarketSummary, OrderState, Vault, VaultSummary)."
+    },
+    {
+      "name": "paradex_markets",
+      "description": "List available markets with details like tick size, min order size, and leverage limits. Supports JMESPath filtering and pagination."
+    },
+    {
+      "name": "paradex_market_summaries",
+      "description": "Get market summaries with price, volume, and 24h change data. Supports JMESPath filtering and pagination."
+    },
+    {
+      "name": "paradex_funding_data",
+      "description": "Get funding rate data for a specific market including funding rates, index prices, and premium."
+    },
+    {
+      "name": "paradex_orderbook",
+      "description": "Get the orderbook (bids and asks) for a specific market at configurable depth."
+    },
+    {
+      "name": "paradex_klines",
+      "description": "Get OHLCV candlestick data for a market at various resolutions (1m to 1h)."
+    },
+    {
+      "name": "paradex_trades",
+      "description": "Get recent trades for a specific market with fill data, size, price, and timestamps."
+    },
+    {
+      "name": "paradex_bbo",
+      "description": "Get the best bid and offer (BBO) with spread data for a specific market."
+    },
+    {
+      "name": "paradex_vaults",
+      "description": "List vaults with metadata, owner, operator, and strategy information. Supports JMESPath filtering."
+    },
+    {
+      "name": "paradex_vault_balance",
+      "description": "Get token balances for a specific vault."
+    },
+    {
+      "name": "paradex_vault_summary",
+      "description": "Get vault performance summaries including ROI, P&L, volume, and drawdown metrics."
+    },
+    {
+      "name": "paradex_vault_transfers",
+      "description": "Get deposit and withdrawal transfer history for a specific vault."
+    },
+    {
+      "name": "paradex_vault_positions",
+      "description": "Get open positions for a specific vault."
+    },
+    {
+      "name": "paradex_vault_account_summary",
+      "description": "Get vault account summary with health, margin, and leverage details."
+    },
+    {
+      "name": "paradex_account_summary",
+      "description": "Get account summary with value, free collateral, and margin requirements. Requires authentication."
+    },
+    {
+      "name": "paradex_account_positions",
+      "description": "Get all open positions with P&L, liquidation price, and leverage. Requires authentication."
+    },
+    {
+      "name": "paradex_account_fills",
+      "description": "Get trade fill history with price, size, fees, and realized PnL. Requires authentication."
+    },
+    {
+      "name": "paradex_account_funding_payments",
+      "description": "Get funding payment history for account positions. Requires authentication."
+    },
+    {
+      "name": "paradex_account_transactions",
+      "description": "Get account transaction history including deposits, withdrawals, and trades. Requires authentication."
+    },
+    {
+      "name": "paradex_open_orders",
+      "description": "List currently open orders with status and fill details. Requires authentication."
+    },
+    {
+      "name": "paradex_create_order",
+      "description": "Place a new order (market, limit, stop, take-profit). Supports GTC, IOC, and POST_ONLY instructions. Requires authentication."
+    },
+    {
+      "name": "paradex_cancel_orders",
+      "description": "Cancel orders by order ID, client ID, or all orders in a market. Requires authentication."
+    },
+    {
+      "name": "paradex_order_status",
+      "description": "Check the status of a specific order by order ID or client ID. Requires authentication."
+    },
+    {
+      "name": "paradex_orders_history",
+      "description": "Get historical orders for a market within a time range. Requires authentication."
+    }
+  ],
+  "user_config": {
+    "paradex_account_private_key": {
+      "type": "string",
+      "title": "Account Private Key",
+      "description": "Your Paradex account private key (StarkNet). Required for trading, account, and order tools. Leave empty for read-only market data access.",
+      "sensitive": true,
+      "required": false
+    },
+    "paradex_account_address": {
+      "type": "string",
+      "title": "Account Address",
+      "description": "Your Paradex account address (StarkNet). Optional — derived from private key if not provided.",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": ["darwin", "linux"],
+    "runtimes": {
+      "python": ">=3.10"
+    }
+  },
+  "keywords": [
+    "paradex",
+    "trading",
+    "perpetuals",
+    "futures",
+    "defi",
+    "starknet",
+    "orderbook",
+    "market-data",
+    "vaults",
+    "mcp"
+  ],
+  "license": "MIT"
+}

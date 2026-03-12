@@ -1,0 +1,45 @@
+# Virtual environments and caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+htmlcov/
+
+# Git and CI
+.git/
+.github/
+
+# Development files
+tests/
+docs/
+docker/
+spec/
+/prompts/
+Dockerfile*
+Makefile
+.pre-commit-config.yaml
+.claude/
+.vscode/
+CONTRIBUTING.md
+CLAUDE.md
+smithery.yaml
+server.json
+mcp-testing-framework.yaml
+uv.lock
+
+# Secrets and local config
+.env
+.env.*
+.mcpregistry_*
+
+# Test / coverage artifacts
+.coverage
+coverage.xml
+
+# Build artifacts
+dist/
+build/
+*.mcpb

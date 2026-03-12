@@ -37,6 +37,36 @@ jobs:
         password: ${{ secrets.PYPI_API_TOKEN }}
         print-hash: true
         
+  mcpb:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # needed to upload release assets
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Build MCPB bundle
+      run: npx --yes @anthropic-ai/mcpb pack .
+
+    - name: Upload MCPB to release
+      if: github.event_name == 'release'
+      uses: softprops/action-gh-release@v2
+      with:
+        files: "*.mcpb"
+
+    - name: Upload MCPB as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: mcpb-bundle
+        path: "*.mcpb"
+
   test-install:
     needs: publish
     runs-on: ubuntu-latest

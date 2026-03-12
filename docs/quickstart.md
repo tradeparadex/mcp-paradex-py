@@ -31,15 +31,30 @@ All trading features require a Paradex account private key. Public market data w
 
 ---
 
-## Claude Desktop
+## Claude Desktop — MCPB Bundle (Recommended)
 
-**Fastest path:** use Smithery to install automatically:
+The fastest way to install is with the pre-built `.mcpb` bundle — one file, no manual config:
+
+1. Download `mcp-paradex-<version>.mcpb` from the [latest GitHub release](https://github.com/tradeparadex/mcp-paradex-py/releases/latest)
+2. Double-click the file (or drag it into Claude Desktop)
+3. Claude Desktop will prompt you to configure:
+   - **Account Private Key** — your StarkNet private key (optional; enables trading tools)
+   - **Account Address** — your StarkNet address (optional; derived from key if omitted)
+4. Click **Install**. Tools appear immediately — no restart needed.
+
+> **Tip:** Market data tools work without credentials. Leave the private key blank for read-only access.
+
+---
+
+## Claude Desktop — Manual Setup
+
+**Via Smithery** (auto-configures everything):
 
 ```bash
 npx -y @smithery/cli@latest mcp add @tradeparadex/mcp-paradex-py --client claude
 ```
 
-**Manual setup:**
+**Manual JSON config:**
 
 1. Find your config file:
    - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`

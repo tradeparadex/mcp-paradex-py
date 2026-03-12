@@ -17,6 +17,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 from mcp_paradex import __version__
 from mcp_paradex.utils.config import config
+from mcp_paradex.utils.paradex_client import _request_bearer_token
 
 # Context variable holding the MCP-Session-Id for the current request.
 # Defaults to "-" so log records outside a request context are still valid.
@@ -87,6 +88,60 @@ class HealthMiddleware:
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http" and scope["path"] == "/health":
             response = JSONResponse({"status": "ok"})
+            await response(scope, receive, send)
+            return
+        await self.app(scope, receive, send)
+
+
+class BearerAuthMiddleware:
+    """
+    Extracts Bearer token from the Authorization header and stores it in a
+    ContextVar so tool handlers can use it to authenticate Paradex API calls.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http":
+            headers = dict(scope.get("headers", []))
+            auth = headers.get(b"authorization", b"").decode()
+            token: str | None = None
+            if auth.startswith("Bearer "):
+                token = auth.removeprefix("Bearer ").strip() or None
+            ctx_token = _request_bearer_token.set(token)
+            try:
+                await self.app(scope, receive, send)
+            finally:
+                _request_bearer_token.reset(ctx_token)
+        else:
+            await self.app(scope, receive, send)
+
+
+class OAuthResourceMetadataMiddleware:
+    """
+    Handles GET /.well-known/oauth-protected-resource (RFC 9728) to advertise
+    the OAuth Authorization Server that MCP clients should use to obtain tokens.
+    All other requests are forwarded unchanged.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if (
+            scope["type"] == "http"
+            and scope["method"] == "GET"
+            and scope["path"] == "/.well-known/oauth-protected-resource"
+        ):
+            metadata: dict[str, Any] = {
+                "bearer_methods_supported": ["header"],
+            }
+            if config.MCP_SERVER_URL:
+                metadata["resource"] = config.MCP_SERVER_URL
+            if config.PARADEX_AUTH_SERVER_URL:
+                metadata["authorization_servers"] = [config.PARADEX_AUTH_SERVER_URL]
+            response = JSONResponse(metadata)
             await response(scope, receive, send)
             return
         await self.app(scope, receive, send)
@@ -192,6 +247,10 @@ def run_cli() -> None:
             )
             starlette_app: ASGIApp = server.streamable_http_app()
             starlette_app = HealthMiddleware(starlette_app)
+            if config.PARADEX_AUTH_SERVER_URL:
+                # Advertise OAuth AS and extract Bearer tokens from requests.
+                starlette_app = OAuthResourceMetadataMiddleware(starlette_app)
+                starlette_app = BearerAuthMiddleware(starlette_app)
             if args.stateless:
                 # Wrap with middleware that rejects GET requests.
                 # In stateless mode GET /mcp would open a persistent SSE stream

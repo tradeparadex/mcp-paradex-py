@@ -292,6 +292,62 @@ pip install datamodel-code-generator
 datamodel-codegen  --input prompts/paradex-openapi.json --use-annotated --use-default-kwarg --keep-model-order --output src/mcp_paradex/models/
 ```
 
+## MCPB Bundle Maintenance
+
+The project ships an `.mcpb` bundle (MCP Bundle) for one-click installation in Claude Desktop and other compatible apps. The bundle is defined by two files at the repository root:
+
+- **`manifest.json`** — MCPB manifest (v0.4, `uv` server type). Declares metadata, tools, user config fields, and compatibility.
+- **`.mcpbignore`** — Controls which files are excluded from the bundle (similar to `.gitignore`).
+
+### When to Update `manifest.json`
+
+- **Adding or removing a tool** — update the `tools` array to match. Each entry needs `name` and `description`.
+- **Bumping the version** — keep `version` in sync with `src/mcp_paradex/__init__.py`.
+- **Changing environment variables** — update `server.mcp_config.env` and `user_config` if new user-facing env vars are added or existing ones renamed. Note: `PARADEX_ENVIRONMENT` is hardcoded to `prod` and not exposed to users.
+- **Changing entry point or dependencies** — update `server.entry_point` and `server.mcp_config.args` if the startup command changes.
+
+### Validating and Building the Bundle
+
+```bash
+# Install the MCPB CLI (one-time)
+npm install -g @anthropic-ai/mcpb
+
+# Validate the manifest
+mcpb validate manifest.json
+
+# Build the bundle
+mcpb pack .
+# Output: mcp-paradex-<version>.mcpb
+
+# Inspect bundle contents
+mcpb info mcp-paradex-<version>.mcpb
+```
+
+### Testing the Bundle
+
+1. **Manifest validation** — `mcpb validate manifest.json` must pass with no errors.
+2. **Stdio transport** — `uv run python src/mcp_paradex/__main__.py` should start the server in stdio mode (it will block waiting for JSON-RPC input; Ctrl+C to exit).
+3. **Install in Claude Desktop** — double-click the `.mcpb` file. Verify the install dialog shows correct metadata, config fields, and tool count.
+4. **Smoke test** — after installation, ask Claude "What markets are available on Paradex?" and verify tools respond.
+
+### Release Checklist
+
+The `.mcpb` bundle is built and attached to GitHub releases automatically by the `publish.yml` workflow. When cutting a new release:
+
+1. Bump version in `src/mcp_paradex/__init__.py`
+2. Update `version` in `manifest.json` to match
+3. Run `mcpb validate manifest.json` locally to catch errors early
+4. Create the GitHub release — the CI workflow will build and attach the `.mcpb` file automatically
+
+To build locally for testing:
+
+```bash
+mcpb pack .
+# Output: mcp-paradex-<version>.mcpb
+```
+
+---
+
 ## How to Contribute
 
 1. Fork the repository
