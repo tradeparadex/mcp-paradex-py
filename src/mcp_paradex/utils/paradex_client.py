@@ -31,7 +31,12 @@ def _make_jwt_client(jwt: str) -> ParadexApiClient:
         transport=httpx.HTTPTransport(retries=1),
         timeout=httpx.Timeout(30.0),
     )
-    client = ParadexApiClient(env=config.ENVIRONMENT, logger=logger, http_client=http_client)
+    client = ParadexApiClient(
+        env=config.ENVIRONMENT,
+        logger=logger,
+        http_client=http_client,
+        auth_params={"token_usage": "interactive"},
+    )
     client.set_token(jwt)
     return client
 
@@ -69,7 +74,10 @@ async def get_paradex_client() -> ParadexApiClient:
             timeout=httpx.Timeout(30.0),
         )
         _paradex_client = ParadexApiClient(
-            env=config.ENVIRONMENT, logger=logger, http_client=http_client
+            env=config.ENVIRONMENT,
+            logger=logger,
+            http_client=http_client,
+            auth_params={"token_usage": "interactive"},
         )
         logger.info("Paradex client api_url=%s", _paradex_client.api_url)
 
