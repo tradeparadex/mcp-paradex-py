@@ -138,19 +138,27 @@ async def api_call(
     Returns:
         Dict[str, Any]: The response from the API call.
     """
+    from mcp_paradex.utils.telemetry import SpanKind, get_tracer
+
     url = f"{client.api_url}/{path}"
-    logger.info("API call url=%s params=%s", url, params)
-    t0 = time.monotonic()
-    try:
-        response = client.get(client.api_url, path, params)
-        logger.info("API call url=%s completed ms=%.0f", url, (time.monotonic() - t0) * 1000)
-        return response
-    except Exception as exc:
-        logger.error(
-            "API call url=%s failed ms=%.0f error=%s: %s",
-            url,
-            (time.monotonic() - t0) * 1000,
-            type(exc).__name__,
-            exc,
-        )
-        raise
+    tracer = get_tracer()
+    with tracer.start_as_current_span(
+        f"paradex.api {path}",
+        kind=SpanKind.CLIENT,
+        attributes={"http.url": url, "peer.service": "paradex-api"},
+    ):
+        logger.info("API call url=%s params=%s", url, params)
+        t0 = time.monotonic()
+        try:
+            response = client.get(client.api_url, path, params)
+            logger.info("API call url=%s completed ms=%.0f", url, (time.monotonic() - t0) * 1000)
+            return response  # type: ignore[no-any-return]
+        except Exception as exc:
+            logger.error(
+                "API call url=%s failed ms=%.0f error=%s: %s",
+                url,
+                (time.monotonic() - t0) * 1000,
+                type(exc).__name__,
+                exc,
+            )
+            raise

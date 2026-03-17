@@ -18,6 +18,9 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 from mcp_paradex import __version__
 from mcp_paradex.utils.config import config
 from mcp_paradex.utils.paradex_client import _request_bearer_token
+from mcp_paradex.utils.telemetry import _OTEL_AVAILABLE, TraceContextLogFilter, configure_otel
+
+_otel_active = configure_otel()
 
 # Context variable holding the MCP-Session-Id for the current request.
 # Defaults to "-" so log records outside a request context are still valid.
@@ -32,11 +35,16 @@ class _SessionIdFilter(logging.Filter):
         return True
 
 
-# Configure logging — include session= so all modules get correlation for free.
+# Configure logging — include session= and trace/span IDs for correlation.
 _handler = logging.StreamHandler()
 _handler.addFilter(_SessionIdFilter())
+_handler.addFilter(TraceContextLogFilter())
 _handler.setFormatter(
-    logging.Formatter("%(asctime)s %(name)s %(levelname)s session=%(session_id)s %(message)s")
+    logging.Formatter(
+        "%(asctime)s %(name)s %(levelname)s "
+        "session=%(session_id)s trace=%(trace_id)s span=%(span_id)s "
+        "%(message)s"
+    )
 )
 logging.basicConfig(level=logging.INFO, handlers=[_handler], force=True)
 logger = logging.getLogger("mcp-paradex")
@@ -60,6 +68,13 @@ class RequestTracingMiddleware:
         headers = {k.lower(): v for k, v in scope.get("headers", [])}
         session_id = headers.get(b"mcp-session-id", b"").decode() or "-"
         token = session_id_ctx.set(session_id)
+        # Tag the active OTel span (no-op when OTel is disabled)
+        if _OTEL_AVAILABLE:
+            from opentelemetry import trace as _ot
+
+            span = _ot.get_current_span()
+            if span.is_recording():
+                span.set_attribute("mcp.session.id", session_id)
         method = scope["method"]
         path = scope["path"]
         t0 = time.monotonic()
@@ -258,6 +273,10 @@ def run_cli() -> None:
                 starlette_app = RejectGetMiddleware(
                     starlette_app, mcp_path=server.settings.streamable_http_path
                 )
+            if _otel_active:
+                from opentelemetry.instrumentation.asgi import OpenTelemetryMiddleware
+
+                starlette_app = OpenTelemetryMiddleware(starlette_app)  # type: ignore[assignment]
             # Outermost: extract MCP-Session-Id and log request/response timing.
             starlette_app = RequestTracingMiddleware(starlette_app)
 
