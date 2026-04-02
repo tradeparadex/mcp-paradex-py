@@ -3,7 +3,7 @@ name = "mcp-paradex"
 dynamic = ["version"]
 description = "MCP server for Paradex trading platform integration"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 license = "MIT"
 authors = [
     {name = "Paradex", email = "support@paradex.trade"},
