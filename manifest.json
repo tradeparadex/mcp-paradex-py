@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "mcp-paradex",
   "display_name": "Paradex Trading",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "MCP server for Paradex perpetual futures trading platform — market data, account management, order placement, and vault operations.",
   "long_description": "Connect AI assistants to the Paradex decentralized perpetual futures exchange. Access real-time market data including orderbooks, trades, funding rates, and klines. Monitor account positions, balances, and transaction history. Place and manage orders with support for market, limit, stop, and take-profit order types. Track vault performance, positions, and transfers. Supports both read-only market data access and authenticated trading when configured with account credentials.",
   "author": {
