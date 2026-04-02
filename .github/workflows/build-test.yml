@@ -35,6 +35,12 @@ jobs:
       - name: Run tests
         run: uv run pytest --cov=mcp_paradex --cov-report=xml
 
+      - name: Build package
+        run: uv build
+
+      - name: Check package
+        run: uvx twine check dist/*
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
