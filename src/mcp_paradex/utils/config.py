@@ -11,6 +11,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _sanitize_env(value: str | None) -> str | None:
+    """Return None for unsubstituted MCPB template variables like ${user_config.foo}."""
+    if value and value.startswith("${") and value.endswith("}"):
+        return None
+    return value or None
+
+
 class Environment(str, Enum):
     """Trading environment options."""
 
@@ -28,8 +35,10 @@ class Config:
     # Paradex configuration
     ENVIRONMENT: str = os.getenv("PARADEX_ENVIRONMENT", "prod")
 
-    PARADEX_ACCOUNT_ADDRESS: str | None = os.getenv("PARADEX_ACCOUNT_ADDRESS")
-    PARADEX_ACCOUNT_PRIVATE_KEY: str | None = os.getenv("PARADEX_ACCOUNT_PRIVATE_KEY")
+    PARADEX_ACCOUNT_ADDRESS: str | None = _sanitize_env(os.getenv("PARADEX_ACCOUNT_ADDRESS"))
+    PARADEX_ACCOUNT_PRIVATE_KEY: str | None = _sanitize_env(
+        os.getenv("PARADEX_ACCOUNT_PRIVATE_KEY")
+    )
 
     # JWT-based auth (alternative to private key)
     PARADEX_JWT_TOKEN: str | None = os.getenv("PARADEX_JWT_TOKEN")
