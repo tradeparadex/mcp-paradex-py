@@ -8,34 +8,39 @@ positions, and transaction history.
 """
 
 import logging
-from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated
 
+from mcp.server.fastmcp.server import Context
 from mcp.types import ToolAnnotations
 from pydantic import Field, TypeAdapter
 
 from mcp_paradex.models import (
+    PagedVaults,
+    PagedVaultSummaries,
     Position,
     Vault,
     VaultAccountSummary,
     VaultBalance,
+    VaultOverview,
     VaultStrategy,
     VaultSummary,
 )
 from mcp_paradex.server.server import server
-from mcp_paradex.utils.config import config
+from mcp_paradex.utils.ctx import ctx_debug, ctx_info
 from mcp_paradex.utils.jmespath_utils import apply_jmespath_filter
 from mcp_paradex.utils.paradex_client import api_call, get_paradex_client
 
 logger = logging.getLogger(__name__)
 
 vault_strategy_adapter = TypeAdapter(list[VaultStrategy])
-
-
 vault_adapter = TypeAdapter(list[Vault])
 
 
-@server.tool(name="paradex_vaults", annotations=ToolAnnotations(readOnlyHint=True))
+@server.tool(
+    name="paradex_vaults",
+    title="Vaults",
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+)
 async def get_vaults(
     vault_address: Annotated[
         str,
@@ -67,7 +72,8 @@ async def get_vaults(
             description="Offset the results to the specified number.",
         ),
     ],
-) -> dict:
+    ctx: Context,
+) -> PagedVaults:
     """
     Get detailed information about a specific vault or all vaults if no address is provided.
 
@@ -91,11 +97,12 @@ async def get_vaults(
         response = await api_call(client, "vaults", params=params)
         if "error" in response:
             raise Exception(response["error"])
-        results = response["results"]
-        vaults = vault_adapter.validate_python(results)
+        vaults = vault_adapter.validate_python(response["results"])
 
-        # Apply JMESPath filter if provided
         if jmespath_filter:
+            await ctx_debug(
+                ctx, f"Applying JMESPath filter: {jmespath_filter}", logger_name="paradex.vaults"
+            )
             vaults = apply_jmespath_filter(
                 data=vaults,
                 jmespath_filter=jmespath_filter,
@@ -103,16 +110,18 @@ async def get_vaults(
                 error_logger=logger.error,
             )
         sorted_vaults = sorted(vaults, key=lambda x: x.created_at, reverse=True)
+        await ctx_info(
+            ctx,
+            f"Returning {min(limit, len(sorted_vaults))} of {len(sorted_vaults)} vaults",
+            logger_name="paradex.vaults",
+        )
         result_vaults = sorted_vaults[offset : offset + limit]
-        result = {
-            "description": Vault.__doc__.strip() if Vault.__doc__ else None,
-            "fields": Vault.model_json_schema(),
-            "vaults": result_vaults,
-            "total": len(sorted_vaults),
-            "limit": limit,
-            "offset": offset,
-        }
-        return result
+        return PagedVaults(
+            results=result_vaults,
+            total=len(sorted_vaults),
+            limit=limit,
+            offset=offset,
+        )
     except Exception as e:
         logger.error(f"Error fetching vault details: {e!s}")
         raise e
@@ -121,11 +130,16 @@ async def get_vaults(
 vault_balance_adapter = TypeAdapter(list[VaultBalance])
 
 
-@server.tool(name="paradex_vault_balance", annotations=ToolAnnotations(readOnlyHint=True))
+@server.tool(
+    name="paradex_vault_balance",
+    title="Vault Balance",
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+)
 async def get_vault_balance(
     vault_address: Annotated[
         str, Field(description="The address of the vault to get balance for.")
     ],
+    ctx: Context,
 ) -> list[VaultBalance]:
     """
     Get the current balance of a specific vault.
@@ -141,9 +155,7 @@ async def get_vault_balance(
         response = await api_call(client, "vaults/balance", params={"address": vault_address})
         if "error" in response:
             raise Exception(response["error"])
-        results = response["results"]
-        balances = vault_balance_adapter.validate_python(results)
-        return balances
+        return vault_balance_adapter.validate_python(response["results"])
     except Exception as e:
         logger.error(f"Error fetching balance for vault {vault_address}: {e!s}")
         raise e
@@ -152,7 +164,11 @@ async def get_vault_balance(
 vault_summary_adapter = TypeAdapter(list[VaultSummary])
 
 
-@server.tool(name="paradex_vault_summary", annotations=ToolAnnotations(readOnlyHint=True))
+@server.tool(
+    name="paradex_vault_summary",
+    title="Vault Summary",
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+)
 async def get_vault_summary(
     vault_address: Annotated[
         str,
@@ -182,7 +198,8 @@ async def get_vault_summary(
             description="Offset the results to the specified number.",
         ),
     ],
-) -> dict:
+    ctx: Context,
+) -> PagedVaultSummaries:
     """
     Get a comprehensive summary of a specific vault or all vaults if no address is provided.
 
@@ -207,11 +224,14 @@ async def get_vault_summary(
         response = await api_call(client, "vaults/summary", params=params)
         if "error" in response:
             raise Exception(response["error"])
-        results = response["results"]
-        summary = vault_summary_adapter.validate_python(results)
+        summary = vault_summary_adapter.validate_python(response["results"])
 
-        # Apply JMESPath filter if provided
         if jmespath_filter:
+            await ctx_debug(
+                ctx,
+                f"Applying JMESPath filter: {jmespath_filter}",
+                logger_name="paradex.vaults",
+            )
             summary = apply_jmespath_filter(
                 data=summary,
                 jmespath_filter=jmespath_filter,
@@ -219,27 +239,34 @@ async def get_vault_summary(
                 error_logger=logger.error,
             )
         sorted_summary = sorted(summary, key=lambda x: x.address, reverse=True)
+        await ctx_info(
+            ctx,
+            f"Returning {min(limit, len(sorted_summary))} of {len(sorted_summary)} vault summaries",
+            logger_name="paradex.vaults",
+        )
         result_summary = sorted_summary[offset : offset + limit]
-        result = {
-            "description": VaultSummary.__doc__.strip() if VaultSummary.__doc__ else None,
-            "fields": VaultSummary.model_json_schema(),
-            "vaults": result_summary,
-            "total": len(sorted_summary),
-            "limit": limit,
-            "offset": offset,
-        }
-        return result
+        return PagedVaultSummaries(
+            results=result_summary,
+            total=len(sorted_summary),
+            limit=limit,
+            offset=offset,
+        )
     except Exception as e:
         logger.error(f"Error fetching summary for vault {vault_address}: {e!s}")
         raise e
 
 
-@server.tool(name="paradex_vault_transfers", annotations=ToolAnnotations(readOnlyHint=True))
+@server.tool(
+    name="paradex_vault_transfers",
+    title="Vault Transfers",
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+)
 async def get_vault_transfers(
     vault_address: Annotated[
         str, Field(description="The address of the vault to get transfers for.")
     ],
-) -> dict[str, Any]:
+    ctx: Context,
+) -> dict:
     """
     Track deposit and withdrawal history for auditing and reconciliation.
 
@@ -263,26 +290,25 @@ async def get_vault_transfers(
     try:
         client = await get_paradex_client()
         response = await api_call(client, "vaults/transfers", params={"address": vault_address})
-        return response["results"]
+        return response["results"]  # type: ignore[no-any-return]
     except Exception as e:
         logger.error(f"Error fetching transfers for vault {vault_address}: {e!s}")
-        return {
-            "success": False,
-            "timestamp": datetime.now().isoformat(),
-            "environment": config.ENVIRONMENT,
-            "error": str(e),
-            "transfers": None,
-        }
+        raise e
 
 
 position_adapter = TypeAdapter(list[Position])
 
 
-@server.tool(name="paradex_vault_positions", annotations=ToolAnnotations(readOnlyHint=True))
+@server.tool(
+    name="paradex_vault_positions",
+    title="Vault Positions",
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+)
 async def get_vault_positions(
     vault_address: Annotated[
         str, Field(description="The address of the vault to get positions for.")
     ],
+    ctx: Context,
 ) -> list[Position]:
     """
     Monitor active trading positions to track performance and manage risk.
@@ -307,8 +333,7 @@ async def get_vault_positions(
     try:
         client = await get_paradex_client()
         response = await api_call(client, "vaults/positions", params={"address": vault_address})
-        positions = position_adapter.validate_python(response["results"])
-        return positions
+        return position_adapter.validate_python(response["results"])
     except Exception as e:
         logger.error(f"Error fetching positions for vault {vault_address}: {e!s}")
         raise e
@@ -317,11 +342,64 @@ async def get_vault_positions(
 vault_account_summary_adapter = TypeAdapter(list[VaultAccountSummary])
 
 
-@server.tool(name="paradex_vault_account_summary", annotations=ToolAnnotations(readOnlyHint=True))
+@server.tool(
+    name="paradex_vault_overview",
+    title="Vault Overview",
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+)
+async def get_vault_overview(
+    vault_address: Annotated[str, Field(description="The vault contract address.")],
+    ctx: Context,
+) -> VaultOverview:
+    """
+    Get a complete operational snapshot of a vault: token balances, open positions,
+    and trading account health in a single call.
+
+    Use this instead of calling paradex_vault_balance, paradex_vault_positions,
+    and paradex_vault_account_summary separately.
+
+    Returns:
+    - balances: vault token balances
+    - positions: all open positions with P&L and liquidation prices
+    - account_summary: margin health, free collateral, leverage
+    """
+    client = await get_paradex_client()
+
+    await ctx.report_progress(0, 3, "Fetching vault balances...")
+    balance_resp = await api_call(client, "vaults/balance", params={"address": vault_address})
+
+    await ctx.report_progress(1, 3, "Fetching vault positions...")
+    positions_resp = await api_call(client, "vaults/positions", params={"address": vault_address})
+
+    await ctx.report_progress(2, 3, "Fetching vault account summary...")
+    account_resp = await api_call(
+        client, "vaults/account-summary", params={"address": vault_address}
+    )
+
+    if "error" in balance_resp:
+        raise Exception(balance_resp["error"])
+    if "error" in positions_resp:
+        raise Exception(positions_resp["error"])
+    if "error" in account_resp:
+        raise Exception(account_resp["error"])
+
+    return VaultOverview(
+        balances=vault_balance_adapter.validate_python(balance_resp["results"]),
+        positions=position_adapter.validate_python(positions_resp["results"]),
+        account_summary=vault_account_summary_adapter.validate_python(account_resp["results"]),
+    )
+
+
+@server.tool(
+    name="paradex_vault_account_summary",
+    title="Vault Account Summary",
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+)
 async def get_vault_account_summary(
     vault_address: Annotated[
         str, Field(description="The address of the vault to get account summary for.")
     ],
+    ctx: Context,
 ) -> list[VaultAccountSummary]:
     """
     Get a comprehensive overview of a vault's trading account status.
@@ -350,9 +428,7 @@ async def get_vault_account_summary(
         )
         if "error" in response:
             raise Exception(response["error"])
-        results = response["results"]
-        summary = vault_account_summary_adapter.validate_python(results)
-        return summary
+        return vault_account_summary_adapter.validate_python(response["results"])
     except Exception as e:
         logger.error(f"Error fetching account summary for vault {vault_address}: {e!s}")
         raise e

@@ -54,7 +54,7 @@ async def get_system_time() -> dict[str, Any]:
     """
     client = await get_paradex_client()
     time = client.fetch_system_time()
-    return time
+    return time  # type: ignore[no-any-return]
 
 
 @server.resource("paradex://system/state")
@@ -70,4 +70,4 @@ async def get_system_state() -> dict[str, Any]:
     """
     client = await get_paradex_client()
     state = client.fetch_system_state()
-    return state
+    return state  # type: ignore[no-any-return]

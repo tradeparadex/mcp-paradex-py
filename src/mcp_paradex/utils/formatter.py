@@ -19,7 +19,7 @@ def serialize_model_with_descriptions(instance: BaseModel) -> dict:
     model_schema = model_class.model_json_schema()  # Get the JSON schema
     instance_data = instance.model_dump()  # Get the instance's values
 
-    serialized_output = {
+    serialized_output: dict[str, Any] = {
         "model_description": model_class.__doc__.strip() if model_class.__doc__ else None,
         "fields": {},
     }

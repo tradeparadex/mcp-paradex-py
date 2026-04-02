@@ -67,7 +67,7 @@ async def get_market_summary(market_id: str) -> dict[str, Any]:
         # Get market summary from Paradex
         client = await get_paradex_client()
         summary = client.fetch_markets_summary(params={"market": market_id})
-        return summary
+        return summary  # type: ignore[no-any-return]
     except Exception as e:
         logger.error(f"Error fetching market summary: {e!s}")
         return {

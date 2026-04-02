@@ -5,25 +5,27 @@ install-dev:
 	pip install -e ".[dev]"
 	pre-commit install
 
+PYTHON ?= .venv/bin/python
+
 # Format code with black
 format:
-	black src tests
+	$(PYTHON) -m black src tests
 
 # Lint code with ruff
 lint:
-	ruff check src tests --fix
+	$(PYTHON) -m ruff check src tests --fix
 
 # Type check with mypy
 typecheck:
-	mypy src
+	$(PYTHON) -m mypy src
 
 # Run tests
 test:
-	pytest
+	$(PYTHON) -m pytest
 
 # Run tests with coverage
 test-cov:
-	pytest --cov=mcp_paradex --cov-report=html
+	$(PYTHON) -m pytest --cov=mcp_paradex --cov-report=html
 
 # Run all checks including tests
 check: format lint typecheck test

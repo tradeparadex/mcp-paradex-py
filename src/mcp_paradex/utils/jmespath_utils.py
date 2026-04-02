@@ -9,13 +9,13 @@ import logging
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-import jmespath
-from jmespath.exceptions import ParseError
-from pydantic import TypeAdapter
+import jmespath  # type: ignore[import-untyped]
+from jmespath.exceptions import ParseError  # type: ignore[import-untyped]
+from pydantic import BaseModel, TypeAdapter
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T")
+T = TypeVar("T", bound=BaseModel)
 
 
 def apply_jmespath_filter(
@@ -58,7 +58,7 @@ def apply_jmespath_filter(
 
         # Convert back to original type
         if filtered_data:
-            return type_adapter.validate_python(
+            return type_adapter.validate_python(  # type: ignore[no-any-return]
                 filtered_data,
                 strict=strict,
                 experimental_allow_partial="on",

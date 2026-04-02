@@ -15,12 +15,17 @@ from paradex_py.api.models import SystemConfig, SystemConfigSchema
 
 from mcp_paradex.models import SystemState
 from mcp_paradex.server.server import server
+from mcp_paradex.utils.ctx import ctx_info
 from mcp_paradex.utils.paradex_client import api_call, get_paradex_client
 
 logger = logging.getLogger(__name__)
 
 
-@server.tool(name="paradex_system_config", annotations=ToolAnnotations(readOnlyHint=True))
+@server.tool(
+    name="paradex_system_config",
+    title="System Configuration",
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+)
 async def get_system_config(ctx: Context) -> SystemConfig:
     """
     Understand the exchange's global parameters that affect all trading activity.
@@ -50,7 +55,11 @@ async def get_system_config(ctx: Context) -> SystemConfig:
         raise e
 
 
-@server.tool(name="paradex_system_state", annotations=ToolAnnotations(readOnlyHint=True))
+@server.tool(
+    name="paradex_system_state",
+    title="System State",
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+)
 async def get_system_state(ctx: Context) -> SystemState:
     """
     Verify the exchange is fully operational before executing trades.
@@ -74,6 +83,7 @@ async def get_system_state(ctx: Context) -> SystemState:
         client = await get_paradex_client()
         state = client.fetch_system_state()
         time = client.fetch_system_time()
+        await ctx_info(ctx, f"System status: {state['status']}", logger_name="paradex.system")
         return SystemState(status=state["status"], timestamp=time["server_time"])
     except Exception as e:
         await ctx.error(f"Error fetching system state: {e!s}")

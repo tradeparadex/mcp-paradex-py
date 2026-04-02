@@ -291,8 +291,8 @@ async def test_bbo_returns_bid_ask(mock_client):
     result = await server.call_tool("paradex_bbo", {"market_id": "BTC-USD-PERP"})
     data = _json(result)
 
-    assert data["results"]["market"] == "BTC-USD-PERP"
-    assert data["results"]["ask"] == 95001.0
+    assert data["market"] == "BTC-USD-PERP"
+    assert data["ask"] == 95001.0
     mock_client.fetch_bbo.assert_called_once_with("BTC-USD-PERP")
 
 
@@ -329,10 +329,11 @@ async def test_trades_passes_time_params(mock_client):
         "paradex_trades",
         {"market_id": "BTC-USD-PERP", "start_unix_ms": 1_000, "end_unix_ms": 2_000},
     )
-    data = _json(result)
+    # list[Trade] → structured output: (content_list, {'result': [...]})
+    trades = result[1]["result"]
 
-    assert len(data["results"]) == 1
-    assert data["results"][0]["id"] == "trade-1"
+    assert len(trades) == 1
+    assert trades[0]["id"] == "trade-1"
     mock_client.fetch_trades.assert_called_once_with(
         params={"market": "BTC-USD-PERP", "start_at": 1_000, "end_at": 2_000}
     )
@@ -383,9 +384,10 @@ async def test_funding_data_passes_params(mock_client):
         "paradex_funding_data",
         {"market_id": "BTC-USD-PERP", "start_unix_ms": 1_000, "end_unix_ms": 2_000},
     )
-    data = _json(result)
+    # list[FundingData] → structured output: (content_list, {'result': [...]})
+    funding = result[1]["result"]
 
-    assert data["results"][0]["market"] == "BTC-USD-PERP"
+    assert funding[0]["market"] == "BTC-USD-PERP"
     mock_client.fetch_funding_data.assert_called_once_with(
         params={"market": "BTC-USD-PERP", "start_at": 1_000, "end_at": 2_000}
     )
@@ -418,8 +420,8 @@ async def test_account_summary_returns_data(auth_client):
     result = await server.call_tool("paradex_account_summary", {})
     data = _json(result)
 
-    assert data["results"]["account"] == "0xabc123"
-    assert data["results"]["status"] == "ACTIVE"
+    assert data["account"] == "0xabc123"
+    assert data["status"] == "ACTIVE"
     auth_client.get.assert_called_once_with(auth_client.api_url, "account", None)
 
 
@@ -427,11 +429,12 @@ async def test_account_positions_returns_list(auth_client):
     auth_client.fetch_positions.return_value = {"results": [POSITION_RECORD]}
 
     result = await server.call_tool("paradex_account_positions", {})
-    data = _json(result)
+    # list[Position] → structured output: (content_list, {'result': [...]})
+    positions = result[1]["result"]
 
-    assert len(data["results"]) == 1
-    assert data["results"][0]["market"] == "BTC-USD-PERP"
-    assert data["results"][0]["side"] == "LONG"
+    assert len(positions) == 1
+    assert positions[0]["market"] == "BTC-USD-PERP"
+    assert positions[0]["side"] == "LONG"
     auth_client.fetch_positions.assert_called_once()
 
 
@@ -492,8 +495,8 @@ async def test_order_status_by_order_id(auth_client):
     result = await server.call_tool("paradex_order_status", {"order_id": "ord-1", "client_id": ""})
     data = _json(result)
 
-    assert data["results"]["id"] == "ord-1"
-    assert data["results"]["market"] == "BTC-USD-PERP"
+    assert data["id"] == "ord-1"
+    assert data["market"] == "BTC-USD-PERP"
     auth_client.fetch_order.assert_called_once_with("ord-1")
 
 
@@ -505,5 +508,5 @@ async def test_order_status_by_client_id(auth_client):
     )
     data = _json(result)
 
-    assert data["results"]["client_id"] == "my-order-1"
+    assert data["client_id"] == "my-order-1"
     auth_client.fetch_order_by_client_id.assert_called_once_with("my-order-1")

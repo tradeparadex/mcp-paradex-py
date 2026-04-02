@@ -213,9 +213,9 @@ def create_server() -> FastMCP:
 # Singleton instance of the server
 server = create_server()
 
-from mcp_paradex.prompts import *
-from mcp_paradex.resources import *
-from mcp_paradex.tools import *
+import mcp_paradex.prompts
+import mcp_paradex.resources
+import mcp_paradex.tools
 
 
 def run_cli() -> None:

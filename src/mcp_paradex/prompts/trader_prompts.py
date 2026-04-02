@@ -40,7 +40,10 @@ def market_overview(volume_threshold: float = 1000000, price_change_threshold: f
 
 @server.prompt()
 def market_analysis(
-    market_id: str, timeframe: str = "1h", risk_percent: float = 1.0, account_balance: float = None
+    market_id: str,
+    timeframe: str = "1h",
+    risk_percent: float = 1.0,
+    account_balance: float | None = None,
 ) -> str:
     """Concise analysis of a specific market with a position recommendation"""
     account_str = f", account_balance={account_balance}" if account_balance else ""
@@ -74,7 +77,7 @@ def create_optimal_order(
 @server.prompt()
 def hedging_strategy(
     market_id: str,
-    position_id: str = None,
+    position_id: str | None = None,
     hedge_purpose: str = "full",
     hedge_duration: str = "medium-term",
     hedge_percentage: float = 100.0,
@@ -133,10 +136,9 @@ def liquidation_protection(
 def trading_consultation() -> list[base.Message]:
     """Interactive trading consultation prompt sequence"""
     return [
-        base.SystemMessage(
-            "You are an expert cryptocurrency trading advisor specialized in Paradex perpetual markets."
+        base.UserMessage(
+            "You are an expert cryptocurrency trading advisor specialized in Paradex perpetual markets. I want help with my trading on Paradex."
         ),
-        base.UserMessage("I want help with my trading on Paradex."),
         base.AssistantMessage(
             """I'd be happy to help with your Paradex trading. To provide the most relevant advice, I'll need to understand more about:
 
