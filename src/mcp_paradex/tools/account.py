@@ -42,6 +42,14 @@ transaction_adapter = TypeAdapter(list[Transaction])
 # Default taker fee rate (0.05%). Actual rate depends on the account's volume-based fee tier.
 _default_taker_fee_rate = 0.0005
 
+# Maps asset_kind to the corresponding taker fee field in the account's fees object.
+# Falls back to "taker_rate" (PERP) for unknown kinds.
+_FEE_FIELD_BY_ASSET_KIND: dict[str, str] = {
+    "SPOT": "spot_taker_rate",
+    "OPTION": "dated_option_taker_rate",
+    "PERP_OPTION": "perp_option_taker_rate",
+}
+
 
 def _check_readiness(
     account: AccountSummary, market_details: MarketDetails, size: float
@@ -437,11 +445,13 @@ async def pre_trade_check(
     if market_details is None:
         raise Exception(f"Market {market_id} not found in market details")
 
-    # Extract actual taker fee rate from account info; fall back to default if unavailable
+    # Extract actual taker fee rate from account info; fall back to default if unavailable.
+    # Different asset kinds have separate fee tiers in the account's fees object.
     taker_fee_rate = _default_taker_fee_rate
     try:
         fees = (account_info_resp.get("fees") or {}) if isinstance(account_info_resp, dict) else {}
-        taker_rate_str = fees.get("taker_rate")
+        fee_field = _FEE_FIELD_BY_ASSET_KIND.get(market_details.asset_kind, "taker_rate")
+        taker_rate_str = fees.get(fee_field) or fees.get("taker_rate")
         if taker_rate_str:
             taker_fee_rate = float(taker_rate_str)
     except (ValueError, TypeError, AttributeError):

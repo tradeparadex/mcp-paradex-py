@@ -126,7 +126,9 @@ async def get_markets(
     - Identifying markets with the smallest tick size for precise entries
     - Checking which assets are available for trading
 
-    `asset_kind` is the type of asset in the market. It can be `PERP` or `PERP_OPTION`.
+    `asset_kind` is the type of asset in the market: `PERP` (perpetual futures),
+    `PERP_OPTION` (perpetual options), `SPOT` (spot markets), `OPTION` (dated/expiring options),
+    or `FUTURE` (dated futures).
 
     You can use JMESPath expressions (https://jmespath.org/specification.html) to filter, sort, or limit the results.
     Use the `paradex_filters_model` tool to get the filters for a tool.

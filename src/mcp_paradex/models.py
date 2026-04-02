@@ -470,7 +470,12 @@ class MarketDetails(BaseModel):
     open_at: Annotated[int, Field(default=0, description="Market open time in milliseconds")]
     expiry_at: Annotated[int, Field(default=0, description="Market expiry time")]
     asset_kind: Annotated[
-        str, Field(default="", description="Type of asset", examples=["PERP", "PERP_OPTION"])
+        str,
+        Field(
+            default="",
+            description="Type of asset",
+            examples=["PERP", "PERP_OPTION", "SPOT", "OPTION", "FUTURE"],
+        ),
     ]
     market_kind: Annotated[str, Field(default="", description="Type of market - always 'cross'")]
     position_limit: Annotated[float, Field(default=0.0, description="Position limit")]

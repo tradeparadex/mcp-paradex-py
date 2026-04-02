@@ -16,10 +16,11 @@ _text() / _json() extract the payload.
 
 import json
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from mcp.server.fastmcp.exceptions import ToolError
+from mcp.server.fastmcp.server import Context
 
 import mcp_paradex.utils.paradex_client as _client_module
 from mcp_paradex.server.server import server
@@ -66,6 +67,13 @@ def auth_client(mock_client):
     """Authenticated Paradex client mock (account / order tools)."""
     mock_client.account = MagicMock()
     return mock_client
+
+
+@pytest.fixture()
+def no_ctx_progress():
+    """Suppress ctx.report_progress for tools tested outside a live MCP session."""
+    with patch.object(Context, "report_progress", new_callable=AsyncMock):
+        yield
 
 
 # ---------------------------------------------------------------------------
@@ -510,3 +518,84 @@ async def test_order_status_by_client_id(auth_client):
 
     assert data["client_id"] == "my-order-1"
     auth_client.fetch_order_by_client_id.assert_called_once_with("my-order-1")
+
+
+# ---------------------------------------------------------------------------
+# Pre-trade check tool
+# ---------------------------------------------------------------------------
+
+# Fee rates by asset kind used in mock responses below.
+_FEES_ALL_KINDS = {
+    "fees": {
+        "taker_rate": "0.0010",
+        "spot_taker_rate": "0.0020",
+        "dated_option_taker_rate": "0.0005",
+        "perp_option_taker_rate": "0.0006",
+    }
+}
+
+
+def _setup_pre_trade_mocks(auth_client, market_record, fees=_FEES_ALL_KINDS):
+    auth_client.get.return_value = ACCOUNT_RESPONSE
+    auth_client.fetch_positions.return_value = {"results": []}
+    auth_client.fetch_markets_summary.return_value = {"results": [SUMMARY_RECORD]}
+    auth_client.fetch_markets.return_value = {"results": [market_record]}
+    auth_client.fetch_account_info.return_value = fees
+
+
+async def test_pre_trade_check_ready_to_trade(auth_client, no_ctx_progress):
+    _setup_pre_trade_mocks(auth_client, MARKET_RECORD)
+
+    result = await server.call_tool(
+        "paradex_pre_trade_check",
+        {"market_id": "BTC-USD-PERP", "side": "BUY", "size": 1.0},
+    )
+    data = _json(result)
+
+    assert data["ready_to_trade"] is True
+    assert data["not_ready_reasons"] == []
+    assert data["account_status"] == "ACTIVE"
+    assert data["market_id"] == "BTC-USD-PERP"
+
+
+@pytest.mark.parametrize(
+    "asset_kind, expected_fee",
+    [
+        # PERP → taker_rate (0.0010)
+        ("PERP", round(1.0 * 95001.0 * 0.0010, 4)),
+        # SPOT → spot_taker_rate (0.0020)
+        ("SPOT", round(1.0 * 95001.0 * 0.0020, 4)),
+        # OPTION (dated) → dated_option_taker_rate (0.0005)
+        ("OPTION", round(1.0 * 95001.0 * 0.0005, 4)),
+        # PERP_OPTION → perp_option_taker_rate (0.0006)
+        ("PERP_OPTION", round(1.0 * 95001.0 * 0.0006, 4)),
+        # FUTURE → falls back to taker_rate (0.0010)
+        ("FUTURE", round(1.0 * 95001.0 * 0.0010, 4)),
+    ],
+)
+async def test_pre_trade_check_fee_rate_by_asset_kind(auth_client, no_ctx_progress, asset_kind, expected_fee):
+    market_record = {**MARKET_RECORD, "asset_kind": asset_kind}
+    _setup_pre_trade_mocks(auth_client, market_record)
+
+    result = await server.call_tool(
+        "paradex_pre_trade_check",
+        {"market_id": "BTC-USD-PERP", "side": "BUY", "size": 1.0},
+    )
+    data = _json(result)
+
+    assert data["estimates"]["estimated_fee_usdc"] == expected_fee
+
+
+async def test_pre_trade_check_falls_back_to_taker_rate_when_specific_fee_absent(auth_client, no_ctx_progress):
+    """When the asset-specific fee field is absent, falls back to generic taker_rate."""
+    market_record = {**MARKET_RECORD, "asset_kind": "SPOT"}
+    # spot_taker_rate deliberately omitted
+    _setup_pre_trade_mocks(auth_client, market_record, fees={"fees": {"taker_rate": "0.0010"}})
+
+    result = await server.call_tool(
+        "paradex_pre_trade_check",
+        {"market_id": "BTC-USD-PERP", "side": "BUY", "size": 1.0},
+    )
+    data = _json(result)
+
+    assert data["estimates"]["estimated_fee_usdc"] == round(1.0 * 95001.0 * 0.0010, 4)
