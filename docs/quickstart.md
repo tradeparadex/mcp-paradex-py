@@ -56,6 +56,16 @@ npx -y @smithery/cli@latest mcp add @tradeparadex/mcp-paradex-py --client claude
 
 **Manual JSON config:**
 
+**Prerequisite — install uv:**
+
+Claude Desktop does not install uv automatically. On macOS, use Homebrew so the binary lands in `/usr/local/bin`, which GUI apps can access:
+
+```bash
+brew install uv
+```
+
+> Other install methods (e.g., `curl -LsSf https://astral.sh/uv/install.sh | sh`) place uv in `~/.local/bin`. GUI apps like Claude Desktop don't inherit your shell `PATH` and won't find it there. If you use the curl method, see the [Troubleshooting](#troubleshooting) section below.
+
 1. Find your config file:
    - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
@@ -78,8 +88,6 @@ npx -y @smithery/cli@latest mcp add @tradeparadex/mcp-paradex-py --client claude
 ```
 
 3. Restart Claude Desktop. You should see a hammer icon (🔨) indicating MCP tools are available.
-
-> **Don't have `uvx`?** Install it with `pip install uv` or from [astral.sh/uv](https://astral.sh/uv).
 
 ---
 
@@ -354,12 +362,20 @@ If you get a list of trading pairs, you're all set. To test trading access:
 - Double-check your private key is correct and starts with `0x`
 - Verify `PARADEX_ENVIRONMENT` matches where your account was created (`prod` or `testnet`)
 
-**`uvx: command not found`**
+**`uvx: command not found` (or server silently fails to start in Claude Desktop)**
+
+Claude Desktop does not inherit your shell `PATH`. Even if `uvx` works in a terminal, Claude Desktop may not find it.
+
+Best fix — install uv via Homebrew, which puts it in `/usr/local/bin`:
 ```bash
-pip install uv
-# or on macOS:
 brew install uv
 ```
+
+If you installed uv via the curl-pipe method and don't want to reinstall, use the full path in your config instead of `"command": "uvx"`:
+```json
+"command": "/Users/your-username/.local/bin/uvx"
+```
+Replace `your-username` with the output of `whoami`. Verify the path first with `which uvx`.
 
 **Want to test without a private key first?**
 Market data tools work without any credentials. Just omit `PARADEX_ACCOUNT_PRIVATE_KEY` from the config.

@@ -30,6 +30,9 @@ AI assistants can:
 ## Prerequisites
 
 - Python 3.10+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) — required for the `uvx` run method
+
+  > **macOS:** Install via `brew install uv` so the binary lands in `/usr/local/bin`, which GUI apps like Claude Desktop can find. The curl-pipe install puts uv in `~/.local/bin`, which GUI apps cannot see.
 
 ## Installation
 
