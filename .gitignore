@@ -32,3 +32,4 @@ mcp-reports
 node_modules
 .mcpregistry_github_token
 .mcpregistry_registry_token
+*.mcpb

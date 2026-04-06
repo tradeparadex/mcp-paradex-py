@@ -12,6 +12,7 @@ import httpx
 from paradex_py.account.account import ParadexAccount
 from paradex_py.account.subkey_account import SubkeyAccount
 from paradex_py.api.api_client import ParadexApiClient
+from paradex_py.api.protocols import DefaultRetryStrategy
 
 from mcp_paradex.utils.config import config
 
@@ -35,6 +36,8 @@ def _make_jwt_client(jwt: str) -> ParadexApiClient:
         env=config.ENVIRONMENT,
         logger=logger,
         http_client=http_client,
+        auto_auth=False,
+        retry_strategy=DefaultRetryStrategy(),
         auth_params={"token_usage": "interactive"},
     )
     client.set_token(jwt)
@@ -77,6 +80,7 @@ async def get_paradex_client() -> ParadexApiClient:
             env=config.ENVIRONMENT,
             logger=logger,
             http_client=http_client,
+            retry_strategy=DefaultRetryStrategy(),
             auth_params={"token_usage": "interactive"},
         )
         logger.info("Paradex client api_url=%s", _paradex_client.api_url)
@@ -104,6 +108,7 @@ async def get_paradex_client() -> ParadexApiClient:
             logger.info("Paradex client authenticated account=%s", _paradex_client.account)
         elif config.PARADEX_JWT_TOKEN:
             logger.info("Authenticating Paradex client via JWT token")
+            _paradex_client.auto_auth = False  # no account to re-sign with
             _paradex_client.set_token(config.PARADEX_JWT_TOKEN)
 
         return _paradex_client
@@ -158,6 +163,10 @@ async def api_call(
         logger.info("API call url=%s params=%s", url, params)
         t0 = time.monotonic()
         try:
+            # Refresh token if needed before the call.  Skip for clients with no
+            # credentials at all (public-only access: no account and no manual token).
+            if client.account is not None or client._manual_token is not None:
+                client._validate_auth()
             response = client.get(client.api_url, path, params)
             logger.info("API call url=%s completed ms=%.0f", url, (time.monotonic() - t0) * 1000)
             return response  # type: ignore[no-any-return]

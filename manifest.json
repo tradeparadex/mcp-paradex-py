@@ -2,9 +2,9 @@
   "manifest_version": "0.4",
   "name": "mcp-paradex",
   "display_name": "Paradex Trading",
-  "version": "0.2.2",
-  "description": "MCP server for Paradex — multi-asset exchange on Starknet with spot, perpetuals, options, and commodity futures.",
-  "long_description": "Connect AI assistants to Paradex, a privacy-preserving multi-asset exchange on Starknet. Trade spot pairs, perpetual futures, dated options, and commodity/TradFi futures. Access real-time market data including orderbooks, trades, funding rates, and klines. Monitor account positions, balances, and transaction history. Place and manage orders with support for market, limit, stop, and take-profit order types. Track vault performance, positions, and transfers. Supports both read-only market data access and authenticated trading when configured with account credentials.",
+  "version": "0.2.4",
+  "description": "MCP server for Paradex — multi-asset exchange with spot, perpetuals, options, and commodity futures.",
+  "long_description": "Connect AI assistants to Paradex, a privacy-preserving multi-asset exchange. Trade spot pairs, perpetual futures, dated options, and commodity/TradFi futures. Access real-time market data including orderbooks, trades, funding rates, and klines. Monitor account positions, balances, and transaction history. Place and manage orders with support for market, limit, stop, and take-profit order types. Track vault performance, positions, and transfers. Supports both read-only market data access and authenticated trading when configured with account credentials.",
   "author": {
     "name": "Paradex",
     "email": "support@paradex.trade",
@@ -146,14 +146,14 @@
     "paradex_account_private_key": {
       "type": "string",
       "title": "Account Private Key",
-      "description": "Your Paradex account private key (StarkNet). Required for trading, account, and order tools. Leave empty if using an API Key instead.",
+      "description": "Your Paradex account private key. Required for trading, account, and order tools. Leave empty if using an API Key instead.",
       "sensitive": true,
       "required": false
     },
     "paradex_account_address": {
       "type": "string",
       "title": "Account Address",
-      "description": "Your Paradex account address (StarkNet). Optional — derived from private key or extracted from API Key automatically.",
+      "description": "Your Paradex account address. Optional — derived from private key or extracted from API Key automatically.",
       "required": false
     },
     "paradex_api_key": {
@@ -178,7 +178,6 @@
     "options",
     "futures",
     "defi",
-    "starknet",
     "orderbook",
     "market-data",
     "vaults",
