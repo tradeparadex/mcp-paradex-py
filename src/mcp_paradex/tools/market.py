@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 )
 async def get_filters_model(
     tool_name: Annotated[str, Field(description="The name of the tool to get the filters for.")],
-) -> dict:
+) -> dict[str, Any]:
     """
     Get detailed schema information to build precise data filters.
 
@@ -66,7 +66,7 @@ async def get_filters_model(
         "paradex_vaults": models.Vault.model_json_schema(),
         "paradex_vault_summary": models.VaultSummary.model_json_schema(),
     }
-    return tool_descriptions[tool_name]
+    return tool_descriptions[tool_name]  # type: ignore[no-any-return]
 
 
 market_details_adapter = TypeAdapter(list[MarketDetails])

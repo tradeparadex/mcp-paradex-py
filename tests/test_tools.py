@@ -86,37 +86,44 @@ MARKET_RECORD = {
     "quote_currency": "USD",
     "settlement_currency": "USDC",
     "order_size_increment": "0.0001",
-    "price_tick_size": 0.1,
-    "min_notional": 1.0,
+    "price_tick_size": "0.1",
+    "min_notional": "1.0",
     "open_at": 0,
     "expiry_at": 0,
     "asset_kind": "PERP",
     "market_kind": "cross",
-    "position_limit": 100.0,
-    "price_bands_width": 0.05,
+    "position_limit": "100.0",
+    "price_bands_width": "0.05",
     "max_open_orders": 50,
-    "max_funding_rate": 0.0003,
+    "max_funding_rate": "0.0003",
     "delta1_cross_margin_params": {},
     "option_cross_margin_params": {},
     "price_feed_id": "",
-    "oracle_ewma_factor": 0.0,
-    "max_order_size": 1000.0,
-    "max_funding_rate_change": 0.0001,
-    "max_tob_spread": 0.01,
-    "interest_rate": 0.0,
-    "clamp_rate": 0.0,
+    "oracle_ewma_factor": "0.0",
+    "max_order_size": "1000.0",
+    "max_funding_rate_change": "0.0001",
+    "max_tob_spread": "0.01",
+    "interest_rate": "0.0",
+    "clamp_rate": "0.0",
     "funding_period_hours": 8,
     "tags": [],
-    "option_type": "",
-    "strike_price": 0.0,
-    "iv_bands_width": 0.0,
+    "option_type": None,
+    "strike_price": "0.0",
+    "iv_bands_width": "0.0",
 }
 
 SUMMARY_RECORD = {
     "symbol": "BTC-USD-PERP",
     "mark_price": "95000.0",
     "delta": "1.0",
-    "greeks": {"delta": 1.0, "gamma": 0.0, "vega": 0.0, "rho": 0.0, "vanna": 0.0, "volga": 0.0},
+    "greeks": {
+        "delta": "1.0",
+        "gamma": "0.0",
+        "vega": "0.0",
+        "rho": "0.0",
+        "vanna": "0.0",
+        "volga": "0.0",
+    },
     "last_traded_price": "95000.0",
     "bid": "94999.0",
     "ask": "95001.0",
@@ -135,9 +142,9 @@ ORDER_RECORD = {
     "market": "BTC-USD-PERP",
     "side": "BUY",
     "type": "LIMIT",
-    "size": 0.1,
-    "remaining_size": 0.1,
-    "price": 94000.0,
+    "size": "0.1",
+    "remaining_size": "0.1",
+    "price": "94000.0",
     "status": "OPEN",
     "created_at": 1_700_000_000_000,
     "last_updated_at": 1_700_000_000_000,
@@ -147,7 +154,7 @@ ORDER_RECORD = {
     "seq_no": 1,
     "instruction": "GTC",
     "avg_fill_price": "0",
-    "stp": "",
+    "stp": None,
     "received_at": 1_700_000_000_000,
     "published_at": 1_700_000_000_000,
     "flags": [],
@@ -174,15 +181,15 @@ POSITION_RECORD = {
     "market": "BTC-USD-PERP",
     "status": "OPEN",
     "side": "LONG",
-    "size": 0.1,
-    "average_entry_price": 95000.0,
-    "average_entry_price_usd": 95000.0,
-    "average_exit_price": 0.0,
-    "unrealized_pnl": 500.0,
-    "unrealized_funding_pnl": -10.0,
-    "cost": 9500.0,
-    "cost_usd": 9500.0,
-    "cached_funding_index": 0.0,
+    "size": "0.1",
+    "average_entry_price": "95000.0",
+    "average_entry_price_usd": "95000.0",
+    "average_exit_price": "0.0",
+    "unrealized_pnl": "500.0",
+    "unrealized_funding_pnl": "-10.0",
+    "cost": "9500.0",
+    "cost_usd": "9500.0",
+    "cached_funding_index": "0.0",
     "last_updated_at": 1_700_000_000_000,
     "last_fill_id": "fill-1",
     "seq_no": 1,
@@ -289,10 +296,10 @@ async def test_bbo_returns_bid_ask(mock_client):
     mock_client.fetch_bbo.return_value = {
         "market": "BTC-USD-PERP",
         "seq_no": 42,
-        "ask": 95001.0,
-        "ask_size": 0.5,
-        "bid": 94999.0,
-        "bid_size": 1.0,
+        "ask": "95001.0",
+        "ask_size": "0.5",
+        "bid": "94999.0",
+        "bid_size": "1.0",
         "last_updated_at": 1_700_000_000_000,
     }
 
@@ -300,7 +307,7 @@ async def test_bbo_returns_bid_ask(mock_client):
     data = _json(result)
 
     assert data["market"] == "BTC-USD-PERP"
-    assert data["ask"] == 95001.0
+    assert data["ask"] == "95001.0"
     mock_client.fetch_bbo.assert_called_once_with("BTC-USD-PERP")
 
 
@@ -325,8 +332,8 @@ async def test_trades_passes_time_params(mock_client):
                 "id": "trade-1",
                 "market": "BTC-USD-PERP",
                 "side": "BUY",
-                "size": 0.1,
-                "price": 95000.0,
+                "size": "0.1",
+                "price": "95000.0",
                 "created_at": 1_700_000_000_000,
                 "trade_type": "FILL",
             }
@@ -472,27 +479,27 @@ async def test_open_orders_passes_market_filter(auth_client):
 
 
 async def test_cancel_order_by_order_id(auth_client):
-    auth_client.cancel_order.return_value = {**ORDER_RECORD, "status": "CANCELLED"}
+    auth_client.cancel_order.return_value = {**ORDER_RECORD, "status": "CLOSED"}
 
     result = await server.call_tool(
         "paradex_cancel_orders", {"order_id": "ord-1", "client_id": "", "market_id": ""}
     )
     data = _json(result)
 
-    assert data["status"] == "CANCELLED"
+    assert data["status"] == "CLOSED"
     auth_client.cancel_order.assert_called_once_with("ord-1")
     auth_client.cancel_order_by_client_id.assert_not_called()
 
 
 async def test_cancel_order_by_client_id(auth_client):
-    auth_client.cancel_order_by_client_id.return_value = {**ORDER_RECORD, "status": "CANCELLED"}
+    auth_client.cancel_order_by_client_id.return_value = {**ORDER_RECORD, "status": "CLOSED"}
 
     result = await server.call_tool(
         "paradex_cancel_orders", {"order_id": "", "client_id": "my-order-1", "market_id": ""}
     )
     data = _json(result)
 
-    assert data["status"] == "CANCELLED"
+    assert data["status"] == "CLOSED"
     auth_client.cancel_order_by_client_id.assert_called_once_with("my-order-1")
     auth_client.cancel_order.assert_not_called()
 
@@ -573,7 +580,9 @@ async def test_pre_trade_check_ready_to_trade(auth_client, no_ctx_progress):
         ("FUTURE", round(1.0 * 95001.0 * 0.0010, 4)),
     ],
 )
-async def test_pre_trade_check_fee_rate_by_asset_kind(auth_client, no_ctx_progress, asset_kind, expected_fee):
+async def test_pre_trade_check_fee_rate_by_asset_kind(
+    auth_client, no_ctx_progress, asset_kind, expected_fee
+):
     market_record = {**MARKET_RECORD, "asset_kind": asset_kind}
     _setup_pre_trade_mocks(auth_client, market_record)
 
@@ -586,7 +595,9 @@ async def test_pre_trade_check_fee_rate_by_asset_kind(auth_client, no_ctx_progre
     assert data["estimates"]["estimated_fee_usdc"] == expected_fee
 
 
-async def test_pre_trade_check_falls_back_to_taker_rate_when_specific_fee_absent(auth_client, no_ctx_progress):
+async def test_pre_trade_check_falls_back_to_taker_rate_when_specific_fee_absent(
+    auth_client, no_ctx_progress
+):
     """When the asset-specific fee field is absent, falls back to generic taker_rate."""
     market_record = {**MARKET_RECORD, "asset_kind": "SPOT"}
     # spot_taker_rate deliberately omitted
@@ -599,3 +610,260 @@ async def test_pre_trade_check_falls_back_to_taker_rate_when_specific_fee_absent
     data = _json(result)
 
     assert data["estimates"]["estimated_fee_usdc"] == round(1.0 * 95001.0 * 0.0010, 4)
+
+
+async def test_pre_trade_check_with_existing_position(auth_client, no_ctx_progress):
+    """Existing position unrealized PnL is reflected in estimates."""
+    auth_client.get.return_value = ACCOUNT_RESPONSE
+    auth_client.fetch_positions.return_value = {"results": [POSITION_RECORD]}
+    auth_client.fetch_markets_summary.return_value = {"results": [SUMMARY_RECORD]}
+    auth_client.fetch_markets.return_value = {"results": [MARKET_RECORD]}
+    auth_client.fetch_account_info.return_value = _FEES_ALL_KINDS
+
+    result = await server.call_tool(
+        "paradex_pre_trade_check",
+        {"market_id": "BTC-USD-PERP", "side": "BUY", "size": 1.0},
+    )
+    data = _json(result)
+
+    assert data["ready_to_trade"] is True
+    assert data["current_position"]["market"] == "BTC-USD-PERP"
+    # unrealized_pnl (500.0) + unrealized_funding_pnl (-10.0) = 490.0
+    assert data["estimates"]["existing_unrealized_pnl_usdc"] == 490.0
+
+
+# ---------------------------------------------------------------------------
+# Additional fixtures for account / vault / order tests
+# ---------------------------------------------------------------------------
+
+BALANCE_RECORD = {"token": "USDC", "size": "10000.0"}
+
+FILL_RECORD = {
+    "id": "fill-1",
+    "side": "BUY",
+    "liquidity": "TAKER",
+    "market": "BTC-USD-PERP",
+    "order_id": "ord-1",
+    "price": "95000.0",
+    "size": "0.1",
+    "fee": "4.75",
+    "fee_currency": "USDC",
+    "created_at": 1_700_000_000_000,
+    "client_id": "my-order-1",
+    "fill_type": "FILL",
+    "realized_pnl": "0.0",
+    "realized_funding": "0.0",
+    "account": "0xabc123",
+}
+
+TRANSACTION_RECORD = {
+    "id": "tx-1",
+    "type": "TRANSACTION_FILL",
+    "hash": "0xabcdef",
+    "state": "ACCEPTED_ON_L2",
+    "created_at": 1_700_000_000_000,
+    "completed_at": 1_700_000_001_000,
+}
+
+VAULT_RECORD = {
+    "address": "0xvault1",
+    "name": "Test Vault",
+    "created_at": 1_700_000_000_000,
+}
+
+VAULT_SUMMARY_RECORD = {
+    "address": "0xvault1",
+    "total_roi": "5.0",
+    "tvl": "50000.0",
+}
+
+VAULT_BALANCE_RECORD = {
+    "token": "USDC",
+    "size": "50000.0",
+    "last_updated_at": 1_700_000_000_000,
+}
+
+VAULT_ACCOUNT_SUMMARY_RECORD = {
+    "address": "0xvault1",
+    "deposited_amount": "10000.0",
+    "vtoken_amount": "9523.8",
+    "total_roi": "5.0",
+    "total_pnl": "500.0",
+    "created_at": 1_700_000_000_000,
+}
+
+
+# ---------------------------------------------------------------------------
+# Account overview / fills / transactions
+# ---------------------------------------------------------------------------
+
+
+async def test_account_overview_returns_composite(auth_client, no_ctx_progress):
+    auth_client.get.return_value = ACCOUNT_RESPONSE
+    auth_client.fetch_balances.return_value = {"results": [BALANCE_RECORD]}
+    auth_client.fetch_positions.return_value = {"results": [POSITION_RECORD]}
+
+    result = await server.call_tool("paradex_account_overview", {})
+    data = _json(result)
+
+    assert data["summary"]["account"] == "0xabc123"
+    assert len(data["balances"]) == 1
+    assert len(data["positions"]) == 1
+    assert data["positions"][0]["market"] == "BTC-USD-PERP"
+
+
+async def test_account_fills_passes_params(auth_client):
+    auth_client.fetch_fills.return_value = {"results": [FILL_RECORD]}
+
+    result = await server.call_tool(
+        "paradex_account_fills",
+        {"market_id": "BTC-USD-PERP", "start_unix_ms": 1_000, "end_unix_ms": 2_000},
+    )
+    fills = result[1]["result"]
+
+    assert len(fills) == 1
+    assert fills[0]["id"] == "fill-1"
+    assert fills[0]["market"] == "BTC-USD-PERP"
+    auth_client.fetch_fills.assert_called_once_with(
+        {"market": "BTC-USD-PERP", "start_at": 1_000, "end_at": 2_000}
+    )
+
+
+async def test_account_transactions_passes_params(auth_client):
+    auth_client.fetch_transactions.return_value = {"results": [TRANSACTION_RECORD]}
+
+    result = await server.call_tool(
+        "paradex_account_transactions",
+        {"start_unix_ms": 1_000, "end_unix_ms": 2_000},
+    )
+    transactions = result[1]["result"]
+
+    assert len(transactions) == 1
+    assert transactions[0]["id"] == "tx-1"
+    auth_client.fetch_transactions.assert_called_once_with(
+        {"start_at": 1_000, "end_at": 2_000, "limit": 50}
+    )
+
+
+# ---------------------------------------------------------------------------
+# Order create / history
+# ---------------------------------------------------------------------------
+
+
+async def test_create_order_calls_submit(auth_client):
+    auth_client.submit_order.return_value = ORDER_RECORD
+
+    result = await server.call_tool(
+        "paradex_create_order",
+        {
+            "market_id": "BTC-USD-PERP",
+            "order_side": "BUY",
+            "order_type": "LIMIT",
+            "size": 0.1,
+            "price": 94000.0,
+            "trigger_price": 0.0,
+            "client_id": "my-order-1",
+        },
+    )
+    data = _json(result)
+
+    assert data["id"] == "ord-1"
+    assert data["market"] == "BTC-USD-PERP"
+    auth_client.submit_order.assert_called_once()
+
+
+async def test_orders_history_passes_params(auth_client):
+    auth_client.fetch_orders_history.return_value = {"results": [ORDER_RECORD]}
+
+    result = await server.call_tool(
+        "paradex_orders_history",
+        {"market_id": "BTC-USD-PERP", "start_unix_ms": 1_000, "end_unix_ms": 2_000},
+    )
+    orders = result[1]["result"]
+
+    assert len(orders) == 1
+    assert orders[0]["id"] == "ord-1"
+    auth_client.fetch_orders_history.assert_called_once_with(
+        params={"market": "BTC-USD-PERP", "start_at": 1_000, "end_at": 2_000}
+    )
+
+
+# ---------------------------------------------------------------------------
+# Vault tools
+# ---------------------------------------------------------------------------
+
+
+async def test_vaults_returns_results(mock_client, no_ctx_progress):
+    mock_client.get.return_value = {"results": [VAULT_RECORD]}
+
+    result = await server.call_tool("paradex_vaults", {"vault_address": ""})
+    data = _json(result)
+
+    assert data["total"] == 1
+    assert data["results"][0]["address"] == "0xvault1"
+    mock_client.get.assert_called_once_with(mock_client.api_url, "vaults", None)
+
+
+async def test_vault_balance_returns_balances(mock_client):
+    mock_client.get.return_value = {"results": [VAULT_BALANCE_RECORD]}
+
+    result = await server.call_tool("paradex_vault_balance", {"vault_address": "0xvault1"})
+    balances = result[1]["result"]
+
+    assert len(balances) == 1
+    assert balances[0]["token"] == "USDC"
+    assert balances[0]["size"] == "50000.0"
+    mock_client.get.assert_called_once_with(
+        mock_client.api_url, "vaults/balance", {"address": "0xvault1"}
+    )
+
+
+async def test_vault_summary_returns_results(mock_client, no_ctx_progress):
+    mock_client.get.return_value = {"results": [VAULT_SUMMARY_RECORD]}
+
+    result = await server.call_tool("paradex_vault_summary", {"vault_address": "0xvault1"})
+    data = _json(result)
+
+    assert data["total"] == 1
+    assert data["results"][0]["address"] == "0xvault1"
+    mock_client.get.assert_called_once_with(
+        mock_client.api_url, "vaults/summary", {"address": "0xvault1"}
+    )
+
+
+async def test_vault_account_summary_returns_results(mock_client):
+    mock_client.get.return_value = {"results": [VAULT_ACCOUNT_SUMMARY_RECORD]}
+
+    result = await server.call_tool(
+        "paradex_vault_account_summary", {"vault_address": "0xvault1"}
+    )
+    summaries = result[1]["result"]
+
+    assert len(summaries) == 1
+    assert summaries[0]["address"] == "0xvault1"
+    mock_client.get.assert_called_once_with(
+        mock_client.api_url, "vaults/account-summary", {"address": "0xvault1"}
+    )
+
+
+async def test_vault_overview_returns_composite(mock_client, no_ctx_progress):
+    def _vault_get(api_url, path, params=None):
+        if path == "vaults/balance":
+            return {"results": [VAULT_BALANCE_RECORD]}
+        if path == "vaults/positions":
+            return {"results": [POSITION_RECORD]}
+        if path == "vaults/account-summary":
+            return {"results": [VAULT_ACCOUNT_SUMMARY_RECORD]}
+        return {}
+
+    mock_client.get.side_effect = _vault_get
+
+    result = await server.call_tool("paradex_vault_overview", {"vault_address": "0xvault1"})
+    data = _json(result)
+
+    assert len(data["balances"]) == 1
+    assert data["balances"][0]["token"] == "USDC"
+    assert len(data["positions"]) == 1
+    assert data["positions"][0]["market"] == "BTC-USD-PERP"
+    assert len(data["account_summary"]) == 1
+    assert data["account_summary"][0]["address"] == "0xvault1"

@@ -1,4 +1,4 @@
-.PHONY: format lint typecheck install-dev pre-commit clean test test-cov build publish
+.PHONY: format lint typecheck install-dev pre-commit clean test test-cov build publish mcpb
 
 # Install development dependencies
 install-dev:
@@ -41,6 +41,10 @@ build:
 # Publish to PyPI using trusted publishing (requires PYPI_TOKEN or trusted publisher config)
 publish: build
 	uv publish
+
+# Build MCPB bundle
+mcpb:
+	npx --yes @anthropic-ai/mcpb pack .
 
 # Clean up cache files
 clean:

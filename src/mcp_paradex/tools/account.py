@@ -62,8 +62,9 @@ def _check_readiness(
             reasons.append("Free collateral is zero or negative")
     except (ValueError, TypeError):
         reasons.append("Cannot parse free_collateral")
-    if market_details.position_limit > 0 and size > market_details.position_limit:
-        reasons.append(f"Size {size} exceeds position limit {market_details.position_limit}")
+    position_limit = float(market_details.position_limit or 0)
+    if position_limit > 0 and size > position_limit:
+        reasons.append(f"Size {size} exceeds position limit {position_limit}")
     return reasons
 
 
@@ -91,7 +92,9 @@ def _compute_estimates(
     existing_unrealized: float | None = None
     if current_position is not None:
         existing_unrealized = round(
-            current_position.unrealized_pnl + current_position.unrealized_funding_pnl, 4
+            float(current_position.unrealized_pnl or 0)
+            + float(current_position.unrealized_funding_pnl or 0),
+            4,
         )
     return PreTradeEstimates(
         estimated_entry_price=entry_price,
@@ -482,10 +485,10 @@ async def pre_trade_check(
             funding_rate=market_summary.funding_rate,
         ),
         market_constraints=PreTradeMarketConstraints(
-            min_notional=market_details.min_notional,
-            order_size_increment=market_details.order_size_increment,
-            position_limit=market_details.position_limit,
-            price_tick_size=market_details.price_tick_size,
+            min_notional=float(market_details.min_notional or 0),
+            order_size_increment=market_details.order_size_increment or "",
+            position_limit=float(market_details.position_limit or 0),
+            price_tick_size=float(market_details.price_tick_size or 0),
         ),
         estimates=estimates,
         ready_to_trade=not not_ready_reasons,
