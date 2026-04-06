@@ -834,9 +834,7 @@ async def test_vault_summary_returns_results(mock_client, no_ctx_progress):
 async def test_vault_account_summary_returns_results(mock_client):
     mock_client.get.return_value = {"results": [VAULT_ACCOUNT_SUMMARY_RECORD]}
 
-    result = await server.call_tool(
-        "paradex_vault_account_summary", {"vault_address": "0xvault1"}
-    )
+    result = await server.call_tool("paradex_vault_account_summary", {"vault_address": "0xvault1"})
     summaries = result[1]["result"]
 
     assert len(summaries) == 1

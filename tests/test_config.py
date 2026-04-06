@@ -99,9 +99,7 @@ class TestConfigAutoPopulatesAddress:
 
     def test_explicit_address_not_overwritten(self):
         token = _make_jwt({"account": "0xfromjwt"})
-        cfg = _reload_config(
-            {"PARADEX_API_KEY": token, "PARADEX_ACCOUNT_ADDRESS": "0xexplicit"}
-        )
+        cfg = _reload_config({"PARADEX_API_KEY": token, "PARADEX_ACCOUNT_ADDRESS": "0xexplicit"})
         assert cfg.config.PARADEX_ACCOUNT_ADDRESS == "0xexplicit"
 
     def test_no_op_when_no_api_key(self):
