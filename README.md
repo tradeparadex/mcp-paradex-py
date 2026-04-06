@@ -18,8 +18,9 @@ Need a remote HTTP endpoint for ChatGPT or Claude.ai web? See the **[HTTP Deploy
 
 ## Overview
 
-This project provides a bridge between AI assistants (like Claude) and the
-Paradex perpetual futures trading platform. Using the MCP standard,
+This project provides a bridge between AI assistants (like Claude) and
+Paradex, a privacy-preserving multi-asset exchange on Starknet with spot,
+perpetuals, options, and commodity futures. Using the MCP standard,
 AI assistants can:
 
 - Retrieve market data from Paradex

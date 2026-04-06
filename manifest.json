@@ -3,8 +3,8 @@
   "name": "mcp-paradex",
   "display_name": "Paradex Trading",
   "version": "0.2.2",
-  "description": "MCP server for Paradex perpetual futures trading platform — market data, account management, order placement, and vault operations.",
-  "long_description": "Connect AI assistants to the Paradex decentralized perpetual futures exchange. Access real-time market data including orderbooks, trades, funding rates, and klines. Monitor account positions, balances, and transaction history. Place and manage orders with support for market, limit, stop, and take-profit order types. Track vault performance, positions, and transfers. Supports both read-only market data access and authenticated trading when configured with account credentials.",
+  "description": "MCP server for Paradex — multi-asset exchange on Starknet with spot, perpetuals, options, and commodity futures.",
+  "long_description": "Connect AI assistants to Paradex, a privacy-preserving multi-asset exchange on Starknet. Trade spot pairs, perpetual futures, dated options, and commodity/TradFi futures. Access real-time market data including orderbooks, trades, funding rates, and klines. Monitor account positions, balances, and transaction history. Place and manage orders with support for market, limit, stop, and take-profit order types. Track vault performance, positions, and transfers. Supports both read-only market data access and authenticated trading when configured with account credentials.",
   "author": {
     "name": "Paradex",
     "email": "support@paradex.trade",
@@ -173,7 +173,9 @@
   "keywords": [
     "paradex",
     "trading",
+    "spot",
     "perpetuals",
+    "options",
     "futures",
     "defi",
     "starknet",
