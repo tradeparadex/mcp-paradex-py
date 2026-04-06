@@ -16,7 +16,6 @@ import pytest
 import mcp_paradex.utils.paradex_client as _client_module
 from mcp_paradex.utils.paradex_client import api_call
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -122,9 +121,10 @@ async def test_api_call_triggers_token_refresh_on_expiry():
     """Full chain: api_call() with expired private-key client calls auth() before the request."""
     client = _make_real_api_client(expired=True, auto_auth=True)
 
-    with patch.object(client, "auth") as mock_auth, patch.object(
-        client, "get", return_value={"results": []}
-    ) as mock_get:
+    with (
+        patch.object(client, "auth") as mock_auth,
+        patch.object(client, "get", return_value={"results": []}) as mock_get,
+    ):
         await api_call(client, "account")
 
     mock_auth.assert_called_once()
@@ -136,9 +136,10 @@ async def test_api_call_no_refresh_when_token_fresh():
     """Full chain: api_call() with a valid token does NOT call auth()."""
     client = _make_real_api_client(expired=False, auto_auth=True)
 
-    with patch.object(client, "auth") as mock_auth, patch.object(
-        client, "get", return_value={"results": []}
-    ) as mock_get:
+    with (
+        patch.object(client, "auth") as mock_auth,
+        patch.object(client, "get", return_value={"results": []}) as mock_get,
+    ):
         await api_call(client, "account")
 
     mock_auth.assert_not_called()
