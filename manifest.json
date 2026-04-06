@@ -31,7 +31,8 @@
       "env": {
         "PARADEX_ENVIRONMENT": "prod",
         "PARADEX_ACCOUNT_PRIVATE_KEY": "${user_config.paradex_account_private_key}",
-        "PARADEX_ACCOUNT_ADDRESS": "${user_config.paradex_account_address}"
+        "PARADEX_ACCOUNT_ADDRESS": "${user_config.paradex_account_address}",
+        "PARADEX_API_KEY": "${user_config.paradex_api_key}"
       }
     }
   },
@@ -145,14 +146,21 @@
     "paradex_account_private_key": {
       "type": "string",
       "title": "Account Private Key",
-      "description": "Your Paradex account private key (StarkNet). Required for trading, account, and order tools. Leave empty for read-only market data access.",
+      "description": "Your Paradex account private key (StarkNet). Required for trading, account, and order tools. Leave empty if using an API Key instead.",
       "sensitive": true,
       "required": false
     },
     "paradex_account_address": {
       "type": "string",
       "title": "Account Address",
-      "description": "Your Paradex account address (StarkNet). Optional — derived from private key if not provided.",
+      "description": "Your Paradex account address (StarkNet). Optional — derived from private key or extracted from API Key automatically.",
+      "required": false
+    },
+    "paradex_api_key": {
+      "type": "string",
+      "title": "API Key",
+      "description": "Your Paradex API key (long-term JWT token). Alternative to Account Private Key — account address is extracted automatically.",
+      "sensitive": true,
       "required": false
     }
   },
