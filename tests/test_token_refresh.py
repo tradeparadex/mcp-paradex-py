@@ -80,6 +80,7 @@ def _make_real_api_client(*, expired: bool, auto_auth: bool = True):
     client.logger = MagicMock()
     client.on_token_expired = None
     client.api_url = "https://api.prod.paradex.trade/v1"
+    client._is_evm_account = False
     return client
 
 

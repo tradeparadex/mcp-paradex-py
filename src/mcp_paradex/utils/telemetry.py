@@ -73,7 +73,7 @@ def get_tracer(name: str = "mcp_paradex") -> _TracerProtocol:
         return _NoOpTracer()
     from mcp_paradex import __version__
 
-    return _trace.get_tracer(name, __version__)  # type: ignore[return-value]
+    return _trace.get_tracer(name, __version__)  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
 
 
 class TraceContextLogFilter(logging.Filter):

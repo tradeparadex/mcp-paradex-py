@@ -63,9 +63,8 @@ Thank you for your interest in contributing to the MCP Paradex Server project!
 
 This project uses several tools to maintain code quality:
 
-- **Black**: Code formatter that enforces a consistent style
-- **Ruff**: Fast Python linter that combines functionality from multiple linting tools
-- **Mypy**: Static type checker for Python
+- **Ruff**: Fast Python formatter and linter (replaces Black and combines multiple linting tools)
+- **ty**: Fast Rust-based type checker for Python (by the Astral team behind Ruff and uv)
 - **Pre-commit**: Git hook scripts to automate checks before commits
 
 ### Setup Development Environment
@@ -269,9 +268,8 @@ Pre-commit hooks are configured to run automatically on git commit. They include
 - Trailing whitespace removal
 - End-of-file fixer
 - YAML/TOML syntax checking
-- Black formatting
+- Ruff formatting
 - Ruff linting
-- Mypy type checking
 
 To manually run all pre-commit hooks on all files:
 
@@ -332,16 +330,42 @@ mcpb info mcp-paradex-<version>.mcpb
 
 ### Release Checklist
 
-The `.mcpb` bundle is built and attached to GitHub releases automatically by the `publish.yml` workflow. When cutting a new release:
+The full publish pipeline is automated via `.github/workflows/publish.yml`. When cutting a new release:
 
-1. Bump version in `src/mcp_paradex/__init__.py`
-2. Update `version` in `manifest.json` to match
-3. Run `mcpb validate manifest.json` locally to catch errors early
-4. Create the GitHub release — the CI workflow will build and attach the `.mcpb` file automatically
+1. **Bump version** in all three places:
+   - `src/mcp_paradex/__init__.py` (`__version__`)
+   - `manifest.json` (`version`)
+   - `server.json` (`version` and `packages[0].version`)
+2. **Validate** the MCPB manifest locally: `mcpb validate manifest.json`
+3. **Merge** your changes to `main`
+4. **Create a GitHub release**:
+   - Go to **Releases → Draft a new release**
+   - Create a new tag matching the version (e.g., `v0.2.5`)
+   - Auto-generate or write release notes
+   - Click **Publish release**
 
-To build locally for testing:
+### What Happens on Release
+
+The `publish.yml` workflow triggers automatically when a GitHub release is published (or via manual `workflow_dispatch`). It runs three jobs:
+
+1. **`publish`** — Builds the package with `uv build`, checks it with `twine check`, and publishes to PyPI using the `PYPI_API_TOKEN` secret (configured in the `release` environment).
+2. **`mcpb`** — Builds the `.mcpb` bundle with `npx @anthropic-ai/mcpb pack .` and attaches it to the GitHub release.
+3. **`test-install`** — Waits for PyPI propagation, then installs the published version and verifies it imports and runs correctly.
+
+#### Required Secrets
+
+| Secret | Where | Purpose |
+|--------|-------|---------|
+| `PYPI_API_TOKEN` | Repository → Settings → Environments → `release` | Authenticate with PyPI for package upload |
+
+#### Building Locally for Testing
 
 ```bash
+# Build the Python package
+uv build
+uvx twine check dist/*
+
+# Build the MCPB bundle
 mcpb pack .
 # Output: mcp-paradex-<version>.mcpb
 ```

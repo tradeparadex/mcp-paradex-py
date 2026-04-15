@@ -6,7 +6,7 @@ import asyncio
 import logging
 import time
 from contextvars import ContextVar
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from paradex_py.account.account import ParadexAccount
@@ -33,9 +33,9 @@ def _make_jwt_client(jwt: str) -> ParadexApiClient:
         timeout=httpx.Timeout(30.0),
     )
     client = ParadexApiClient(
-        env=config.ENVIRONMENT,
+        env=cast(Any, config.ENVIRONMENT),
         logger=logger,
-        http_client=http_client,
+        http_client=cast(Any, http_client),
         auto_auth=False,
         retry_strategy=DefaultRetryStrategy(),
         auth_params={"token_usage": "interactive"},
@@ -77,9 +77,9 @@ async def get_paradex_client() -> ParadexApiClient:
             timeout=httpx.Timeout(30.0),
         )
         _paradex_client = ParadexApiClient(
-            env=config.ENVIRONMENT,
+            env=cast(Any, config.ENVIRONMENT),
             logger=logger,
-            http_client=http_client,
+            http_client=cast(Any, http_client),
             retry_strategy=DefaultRetryStrategy(),
             auth_params={"token_usage": "interactive"},
         )

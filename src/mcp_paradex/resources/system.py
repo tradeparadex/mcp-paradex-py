@@ -2,6 +2,7 @@
 System status and health check resources.
 """
 
+from dataclasses import asdict
 from datetime import datetime
 from typing import Any
 
@@ -37,7 +38,7 @@ async def get_system_config() -> dict[str, Any]:
         "website": "https://paradex.trade/",
         "documentation": "https://github.com/tradeparadex/paradex-docs",
     }
-    base.update(syscfg.model_dump())
+    base.update(asdict(syscfg))
     return base
 
 

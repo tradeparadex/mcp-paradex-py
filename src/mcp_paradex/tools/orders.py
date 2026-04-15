@@ -27,7 +27,7 @@ order_state_adapter = TypeAdapter(list[OrderState])
 @server.tool(
     name="paradex_open_orders",
     title="Open Orders",
-    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
 async def get_open_orders(
     market_id: Annotated[str, Field(default="ALL", description="Filter by market.")],
@@ -93,7 +93,7 @@ async def get_open_orders(
 @server.tool(
     name="paradex_create_order",
     title="Create Order",
-    annotations=ToolAnnotations(destructiveHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(destructiveHint=True),
 )
 async def create_order(
     market_id: Annotated[str, Field(description="Market identifier.")],
@@ -149,7 +149,7 @@ async def create_order(
 @server.tool(
     name="paradex_cancel_orders",
     title="Cancel Orders",
-    annotations=ToolAnnotations(destructiveHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(destructiveHint=True),
 )
 async def cancel_orders(
     order_id: Annotated[
@@ -162,7 +162,7 @@ async def cancel_orders(
         str, Field(default="ALL", description="Market is the market to cancel orders for")
     ],
     ctx: Context,
-) -> OrderState:
+) -> dict[str, str]:
     """
     Cancel pending orders to manage exposure or adjust your trading strategy.
 
@@ -190,20 +190,23 @@ async def cancel_orders(
     """
     client = await get_authenticated_paradex_client()
     if order_id:
-        response = client.cancel_order(order_id)
+        client.cancel_order(order_id)
+        return {"status": "queued", "order_id": order_id}
     elif client_id:
-        response = client.cancel_order_by_client_id(client_id)
+        client.cancel_order_by_client_id(client_id)
+        return {"status": "queued", "client_id": client_id}
     elif market_id:
-        response = client.cancel_all_orders(market_id)
+        client.cancel_all_orders({"market": market_id})
+        return {"status": "queued", "market": market_id}
     else:
-        raise Exception("Either order_id or client_id must be provided.")
-    return OrderState(**response)
+        client.cancel_all_orders()
+        return {"status": "queued", "scope": "all"}
 
 
 @server.tool(
     name="paradex_order_status",
     title="Order Status",
-    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
 async def get_order_status(
     order_id: Annotated[str, Field(description="Order identifier.")],
@@ -243,7 +246,7 @@ async def get_order_status(
 @server.tool(
     name="paradex_orders_history",
     title="Orders History",
-    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
 async def get_orders_history(
     market_id: Annotated[str, Field(description="Filter by market.")],
