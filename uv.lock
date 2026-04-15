@@ -1277,7 +1277,7 @@ requires-dist = [
     { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.27.0" },
     { name = "opentelemetry-instrumentation-asgi", specifier = ">=0.48b0" },
     { name = "opentelemetry-sdk", specifier = ">=1.27.0" },
-    { name = "paradex-py", specifier = ">=0.5.6rc3" },
+    { name = "paradex-py", specifier = ">=0.5.6rc5" },
     { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=4.2.0" },
     { name = "pydantic", specifier = ">=2.11.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.3.5" },
@@ -1571,10 +1571,11 @@ wheels = [
 
 [[package]]
 name = "paradex-py"
-version = "0.5.6rc3"
+version = "0.5.6rc5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "eth-account", marker = "sys_platform != 'win32'" },
+    { name = "eth-keys", marker = "sys_platform != 'win32'" },
     { name = "httpx", marker = "sys_platform != 'win32'" },
     { name = "ledgereth", marker = "sys_platform != 'win32'" },
     { name = "marshmallow-dataclass", marker = "sys_platform != 'win32'" },
@@ -1585,9 +1586,9 @@ dependencies = [
     { name = "starknet-py", marker = "sys_platform != 'win32'" },
     { name = "websockets", marker = "sys_platform != 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/92/6f/0508b66b84f0680b6fcf9339c64522eff05b7c57ed8d4d1ae0a21cb4d82b/paradex_py-0.5.6rc3.tar.gz", hash = "sha256:8a1a8fb9e4de9f5bb708d84237578fc4319e3b904b280a723560cdc0d7136845", size = 349232, upload-time = "2026-04-01T06:43:41.944Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/aa/94/c8e4aa52c0cb6e2413b958fbc3541f07543d9f8ccb9c3664393e78061280/paradex_py-0.5.6rc5.tar.gz", hash = "sha256:d7bf0b2f5b45a2f2af938d69bdef2aea18d2d1410451f7dc82023013f8d467f2", size = 377918, upload-time = "2026-04-13T02:04:33.747Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c3/35/2d0d795d8db08cfed664b3cb50b7a609b2d3175691d80913abc56070aea2/paradex_py-0.5.6rc3-py3-none-any.whl", hash = "sha256:b65883ea9747b2a54c94c4bf115f280ea9c1d6410e6bb0a19278b099fcd4b098", size = 86194, upload-time = "2026-04-01T06:43:40.858Z" },
+    { url = "https://files.pythonhosted.org/packages/08/04/78c96d240b5ca9d7943aacadb74c5a1aae1c84c983072781fbf59a599951/paradex_py-0.5.6rc5-py3-none-any.whl", hash = "sha256:c613b27bd87927e01a2adf4221fdc536f0a0a8b750f5dae335707cead99f0454", size = 94633, upload-time = "2026-04-13T02:04:35.069Z" },
 ]
 
 [[package]]
