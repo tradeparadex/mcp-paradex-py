@@ -874,14 +874,14 @@ async def test_vault_overview_returns_composite(mock_client, no_ctx_progress):
 
 @pytest.fixture()
 def temp_keys_dir(tmp_path, monkeypatch):
-    """Redirect key storage to a temporary directory.
+    """Redirect default key storage to a temporary directory.
 
     Patches the registered tool function's globals directly so the
     fixture is resilient to module reloads (e.g. from test_config.py).
     """
     keys_dir = tmp_path / "keys"
     tool_fn = server._tool_manager._tools["paradex_generate_subkey"].fn
-    monkeypatch.setitem(tool_fn.__globals__, "KEYS_DIR", keys_dir)
+    monkeypatch.setitem(tool_fn.__globals__, "DEFAULT_KEYS_DIR", keys_dir)
     return keys_dir
 
 
@@ -918,6 +918,38 @@ async def test_generate_subkey_default_name(temp_keys_dir):
     # Verify the file was created with the generated name
     key_file = temp_keys_dir / f"{data['name']}.json"
     assert key_file.exists()
+
+
+async def test_generate_subkey_custom_path(tmp_path):
+    custom_dir = tmp_path / "custom-keys"
+    custom_dir.mkdir()
+
+    result = await server.call_tool(
+        "paradex_generate_subkey", {"name": "path-key", "path": str(custom_dir)}
+    )
+    data = _json(result)
+
+    assert data["name"] == "path-key"
+    key_file = custom_dir / "path-key.json"
+    assert key_file.exists()
+    assert oct(key_file.stat().st_mode & 0o777) == oct(0o600)
+
+
+async def test_generate_subkey_custom_path_created_if_missing(tmp_path):
+    new_dir = tmp_path / "new" / "nested" / "keys"
+
+    result = await server.call_tool(
+        "paradex_generate_subkey", {"name": "nested-key", "path": str(new_dir)}
+    )
+    data = _json(result)
+
+    assert data["name"] == "nested-key"
+    assert (new_dir / "nested-key.json").exists()
+
+
+async def test_generate_subkey_rejects_relative_path(temp_keys_dir):
+    with pytest.raises(ToolError):
+        await server.call_tool("paradex_generate_subkey", {"name": "bad", "path": "relative/path"})
 
 
 async def test_generate_subkey_rejects_duplicate_name(temp_keys_dir):

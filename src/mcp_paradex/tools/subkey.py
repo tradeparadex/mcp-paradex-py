@@ -24,8 +24,8 @@ from mcp_paradex.utils.ctx import ctx_info
 
 logger = logging.getLogger(__name__)
 
-# Key storage directory
-KEYS_DIR = Path.home() / ".mcp-paradex" / "keys"
+# Default key storage directory
+DEFAULT_KEYS_DIR = Path.home() / ".mcp-paradex" / "keys"
 
 _VALID_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
@@ -51,14 +51,25 @@ async def generate_subkey(
             ),
         ),
     ],
+    path: Annotated[
+        str,
+        Field(
+            default="",
+            description=(
+                "Optional absolute directory path where the key file will be stored. "
+                "If omitted, defaults to ~/.mcp-paradex/keys/. "
+                "The directory must exist and be writable."
+            ),
+        ),
+    ],
     ctx: Context,
 ) -> GeneratedSubkey:
     """
     Generate a StarkNet keypair for use as a Paradex subkey.
 
-    The private key is persisted locally at ~/.mcp-paradex/keys/ and never
-    leaves the machine. Only the public key is returned so the frontend can
-    register it on Paradex on behalf of the agent.
+    The private key is persisted locally and never leaves the machine.
+    Only the public key is returned so the frontend can register it on
+    Paradex on behalf of the agent.
 
     Use this tool when you need to:
     - Provision a new subkey for agent trading
@@ -79,9 +90,18 @@ async def generate_subkey(
                 "Use only alphanumeric characters, hyphens, or underscores."
             )
 
+        # Determine key directory
+        keys_dir = Path(path.strip()) if path.strip() else DEFAULT_KEYS_DIR
+        if not keys_dir.is_absolute():
+            raise ValueError(f"Path must be absolute, got: '{keys_dir}'")
+
         # Ensure key directory exists with restrictive permissions
-        KEYS_DIR.mkdir(parents=True, exist_ok=True)
-        KEYS_DIR.chmod(0o700)
+        keys_dir.mkdir(parents=True, exist_ok=True)
+        keys_dir.chmod(0o700)
+
+        # Verify the directory is writable before generating the key
+        if not os.access(str(keys_dir), os.W_OK):
+            raise ValueError(f"Directory is not writable: '{keys_dir}'")
 
         # Generate keypair
         key_pair = KeyPair.generate()
@@ -98,7 +118,7 @@ async def generate_subkey(
 
         # Write key file atomically with restrictive permissions (0o600).
         # O_EXCL prevents overwriting an existing key with the same name.
-        key_file = KEYS_DIR / f"{sanitized_name}.json"
+        key_file = keys_dir / f"{sanitized_name}.json"
         fd = os.open(str(key_file), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:
             os.write(fd, json.dumps(key_data, indent=2).encode())
@@ -107,7 +127,7 @@ async def generate_subkey(
 
         await ctx_info(
             ctx,
-            f"Generated subkey '{sanitized_name}' with public key {public_key_hex}",
+            f"Generated subkey '{sanitized_name}' at {keys_dir} with public key {public_key_hex}",
             logger_name="paradex.subkey",
         )
 
