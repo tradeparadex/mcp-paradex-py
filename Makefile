@@ -7,17 +7,17 @@ install-dev:
 
 PYTHON ?= .venv/bin/python
 
-# Format code with black
+# Format code with ruff
 format:
-	$(PYTHON) -m black src tests
+	$(PYTHON) -m ruff format src tests
 
 # Lint code with ruff
 lint:
 	$(PYTHON) -m ruff check src tests --fix
 
-# Type check with mypy
+# Type check with ty
 typecheck:
-	$(PYTHON) -m mypy src
+	$(PYTHON) -m ty check src
 
 # Run tests
 test:
@@ -51,5 +51,5 @@ clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
 	find . -type d -name ".ruff_cache" -exec rm -rf {} +
-	find . -type d -name ".mypy_cache" -exec rm -rf {} +
+	find . -type d -name ".ty_cache" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete

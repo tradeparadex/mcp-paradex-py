@@ -57,10 +57,13 @@ def _check_readiness(
     reasons: list[str] = []
     if account.status != "ACTIVE":
         reasons.append(f"Account status is {account.status}, not ACTIVE")
-    try:
-        if float(account.free_collateral) <= 0:
-            reasons.append("Free collateral is zero or negative")
-    except (ValueError, TypeError):
+    if account.free_collateral is not None:
+        try:
+            if float(account.free_collateral) <= 0:
+                reasons.append("Free collateral is zero or negative")
+        except ValueError:
+            reasons.append("Cannot parse free_collateral")
+    else:
         reasons.append("Cannot parse free_collateral")
     position_limit = float(market_details.position_limit or 0)
     if position_limit > 0 and size > position_limit:
@@ -109,7 +112,7 @@ def _compute_estimates(
 @server.tool(
     name="paradex_account_summary",
     title="Account Summary",
-    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
 async def get_account_summary(ctx: Context) -> AccountSummary:
     """
@@ -138,7 +141,7 @@ async def get_account_summary(ctx: Context) -> AccountSummary:
 @server.tool(
     name="paradex_account_balance",
     title="Account Balances",
-    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
 async def get_account_balance(ctx: Context) -> list[Balance]:
     """
@@ -164,7 +167,7 @@ async def get_account_balance(ctx: Context) -> list[Balance]:
 @server.tool(
     name="paradex_account_positions",
     title="Account Positions",
-    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
 async def get_account_positions(ctx: Context) -> list[Position]:
     """
@@ -198,7 +201,7 @@ async def get_account_positions(ctx: Context) -> list[Position]:
 @server.tool(
     name="paradex_account_overview",
     title="Account Overview",
-    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
 async def get_account_overview(ctx: Context) -> AccountOverview:
     """
@@ -240,7 +243,7 @@ async def get_account_overview(ctx: Context) -> AccountOverview:
 @server.tool(
     name="paradex_account_fills",
     title="Trade Fills",
-    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
 async def get_account_fills(
     market_id: Annotated[str, Field(description="Filter by market ID.")],
@@ -284,7 +287,7 @@ async def get_account_fills(
 @server.tool(
     name="paradex_account_funding_payments",
     title="Funding Payments",
-    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
 async def get_account_funding_payments(
     market_id: Annotated[str | None, Field(default=None, description="Filter by market ID.")],
@@ -322,7 +325,7 @@ async def get_account_funding_payments(
 @server.tool(
     name="paradex_account_transactions",
     title="Account Transactions",
-    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
 async def get_account_transactions(
     transaction_type: Annotated[
@@ -370,7 +373,7 @@ async def get_account_transactions(
 @server.tool(
     name="paradex_pre_trade_check",
     title="Pre-Trade Check",
-    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True, requiresAuth=True),  # type: ignore[call-arg]
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
 async def pre_trade_check(
     market_id: Annotated[str, Field(description="Market symbol, e.g. 'BTC-USD-PERP'.")],
@@ -410,14 +413,18 @@ async def pre_trade_check(
         0, 4, "Fetching account, positions, market summary, constraints, and fees..."
     )
 
-    account_resp, positions_resp, summaries_resp, markets_resp, account_info_resp = (
-        await asyncio.gather(
-            api_call(auth_client, "account"),
-            asyncio.to_thread(auth_client.fetch_positions),
-            asyncio.to_thread(public_client.fetch_markets_summary, params={"market": market_id}),
-            asyncio.to_thread(public_client.fetch_markets),
-            asyncio.to_thread(auth_client.fetch_account_info),
-        )
+    (
+        account_resp,
+        positions_resp,
+        summaries_resp,
+        markets_resp,
+        account_info_resp,
+    ) = await asyncio.gather(
+        api_call(auth_client, "account"),
+        asyncio.to_thread(auth_client.fetch_positions),
+        asyncio.to_thread(public_client.fetch_markets_summary, params={"market": market_id}),
+        asyncio.to_thread(public_client.fetch_markets),
+        asyncio.to_thread(auth_client.fetch_account_info),
     )
 
     await ctx.report_progress(1, 4, "Parsing account and position data...")
@@ -453,7 +460,7 @@ async def pre_trade_check(
     taker_fee_rate = _default_taker_fee_rate
     try:
         fees = (account_info_resp.get("fees") or {}) if isinstance(account_info_resp, dict) else {}
-        fee_field = _FEE_FIELD_BY_ASSET_KIND.get(market_details.asset_kind, "taker_rate")
+        fee_field = _FEE_FIELD_BY_ASSET_KIND.get(market_details.asset_kind or "", "taker_rate")
         taker_rate_str = fees.get(fee_field) or fees.get("taker_rate")
         if taker_rate_str:
             taker_fee_rate = float(taker_rate_str)
@@ -475,14 +482,14 @@ async def pre_trade_check(
         market_id=market_id,
         side=side,
         size=size,
-        account_status=account.status,
-        free_collateral=account.free_collateral,
+        account_status=account.status or "",
+        free_collateral=account.free_collateral or "",
         current_position=current_position,
         bbo=PreTradeBBO(
-            bid=market_summary.bid,
-            ask=market_summary.ask,
-            mark_price=market_summary.mark_price,
-            funding_rate=market_summary.funding_rate,
+            bid=market_summary.bid or "",
+            ask=market_summary.ask or "",
+            mark_price=market_summary.mark_price or "",
+            funding_rate=market_summary.funding_rate or "",
         ),
         market_constraints=PreTradeMarketConstraints(
             min_notional=float(market_details.min_notional or 0),

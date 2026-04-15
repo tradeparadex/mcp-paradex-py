@@ -479,27 +479,29 @@ async def test_open_orders_passes_market_filter(auth_client):
 
 
 async def test_cancel_order_by_order_id(auth_client):
-    auth_client.cancel_order.return_value = {**ORDER_RECORD, "status": "CLOSED"}
+    auth_client.cancel_order.return_value = None
 
     result = await server.call_tool(
         "paradex_cancel_orders", {"order_id": "ord-1", "client_id": "", "market_id": ""}
     )
     data = _json(result)
 
-    assert data["status"] == "CLOSED"
+    assert data["status"] == "queued"
+    assert data["order_id"] == "ord-1"
     auth_client.cancel_order.assert_called_once_with("ord-1")
     auth_client.cancel_order_by_client_id.assert_not_called()
 
 
 async def test_cancel_order_by_client_id(auth_client):
-    auth_client.cancel_order_by_client_id.return_value = {**ORDER_RECORD, "status": "CLOSED"}
+    auth_client.cancel_order_by_client_id.return_value = None
 
     result = await server.call_tool(
         "paradex_cancel_orders", {"order_id": "", "client_id": "my-order-1", "market_id": ""}
     )
     data = _json(result)
 
-    assert data["status"] == "CLOSED"
+    assert data["status"] == "queued"
+    assert data["client_id"] == "my-order-1"
     auth_client.cancel_order_by_client_id.assert_called_once_with("my-order-1")
     auth_client.cancel_order.assert_not_called()
 

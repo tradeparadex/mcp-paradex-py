@@ -92,9 +92,9 @@ async def test_tool_schemas_have_input_schema():
         result = await client.list_tools()
         for tool in result.tools:
             assert tool.inputSchema is not None, f"Tool {tool.name!r} has no input schema"
-            assert (
-                tool.inputSchema.get("type") == "object"
-            ), f"Tool {tool.name!r} input schema type is not 'object'"
+            assert tool.inputSchema.get("type") == "object", (
+                f"Tool {tool.name!r} input schema type is not 'object'"
+            )
 
 
 async def test_call_public_tool_via_protocol(mock_client):

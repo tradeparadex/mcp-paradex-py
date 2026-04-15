@@ -63,9 +63,8 @@ Thank you for your interest in contributing to the MCP Paradex Server project!
 
 This project uses several tools to maintain code quality:
 
-- **Black**: Code formatter that enforces a consistent style
-- **Ruff**: Fast Python linter that combines functionality from multiple linting tools
-- **Mypy**: Static type checker for Python
+- **Ruff**: Fast Python formatter and linter (replaces Black and combines multiple linting tools)
+- **ty**: Fast Rust-based type checker for Python (by the Astral team behind Ruff and uv)
 - **Pre-commit**: Git hook scripts to automate checks before commits
 
 ### Setup Development Environment
@@ -269,9 +268,8 @@ Pre-commit hooks are configured to run automatically on git commit. They include
 - Trailing whitespace removal
 - End-of-file fixer
 - YAML/TOML syntax checking
-- Black formatting
+- Ruff formatting
 - Ruff linting
-- Mypy type checking
 
 To manually run all pre-commit hooks on all files:
 

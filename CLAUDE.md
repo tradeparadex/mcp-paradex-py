@@ -28,20 +28,20 @@ pre-commit install
 ### Development Commands
 
 ```bash
-# Format code with black
+# Format code with ruff
 make format
 # OR
-black src tests
+ruff format src tests
 
 # Lint code with ruff
 make lint
 # OR
 ruff check src tests --fix
 
-# Type check with mypy
+# Type check with ty
 make typecheck
 # OR
-mypy src
+ty check src
 
 # Run tests
 make test
@@ -110,7 +110,7 @@ The server uses the Paradex Python API client to connect to the Paradex exchange
 
 ## Development Guidelines
 
-1. All code should follow the project's formatting (Black), linting (Ruff), and type checking (Mypy) standards.
+1. All code should follow the project's formatting and linting (Ruff) and type checking (ty) standards.
 2. Pre-commit hooks are set up to run automatically on git commits.
 3. New features should include appropriate tests.
 4. Always run the type checker before committing changes.
