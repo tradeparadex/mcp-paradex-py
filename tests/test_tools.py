@@ -874,9 +874,14 @@ async def test_vault_overview_returns_composite(mock_client, no_ctx_progress):
 
 @pytest.fixture()
 def temp_keys_dir(tmp_path, monkeypatch):
-    """Redirect key storage to a temporary directory."""
+    """Redirect key storage to a temporary directory.
+
+    Patches the registered tool function's globals directly so the
+    fixture is resilient to module reloads (e.g. from test_config.py).
+    """
     keys_dir = tmp_path / "keys"
-    monkeypatch.setattr("mcp_paradex.tools.subkey.KEYS_DIR", keys_dir)
+    tool_fn = server._tool_manager._tools["paradex_generate_subkey"].fn
+    monkeypatch.setitem(tool_fn.__globals__, "KEYS_DIR", keys_dir)
     return keys_dir
 
 
