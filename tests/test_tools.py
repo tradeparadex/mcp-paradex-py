@@ -865,3 +865,64 @@ async def test_vault_overview_returns_composite(mock_client, no_ctx_progress):
     assert data["positions"][0]["market"] == "BTC-USD-PERP"
     assert len(data["account_summary"]) == 1
     assert data["account_summary"][0]["address"] == "0xvault1"
+
+
+# ---------------------------------------------------------------------------
+# Subkey generation tool
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture()
+def temp_keys_dir(tmp_path, monkeypatch):
+    """Redirect key storage to a temporary directory."""
+    keys_dir = tmp_path / "keys"
+    monkeypatch.setattr("mcp_paradex.tools.subkey.KEYS_DIR", keys_dir)
+    return keys_dir
+
+
+async def test_generate_subkey_creates_key_file(temp_keys_dir):
+    result = await server.call_tool("paradex_generate_subkey", {"name": "test-key"})
+    data = _json(result)
+
+    assert data["name"] == "test-key"
+    assert data["public_key"].startswith("0x")
+    # Private key must NOT be in the response
+    assert "private_key" not in data
+
+    # Verify file on disk
+    key_file = temp_keys_dir / "test-key.json"
+    assert key_file.exists()
+
+    stored = json.loads(key_file.read_text())
+    assert stored["name"] == "test-key"
+    assert stored["public_key"] == data["public_key"]
+    assert stored["private_key"].startswith("0x")
+    assert "created_at" in stored
+
+    # Verify restrictive file permissions
+    assert oct(key_file.stat().st_mode & 0o777) == oct(0o600)
+
+
+async def test_generate_subkey_default_name(temp_keys_dir):
+    result = await server.call_tool("paradex_generate_subkey", {"name": ""})
+    data = _json(result)
+
+    assert data["name"].startswith("subkey-")
+    assert data["public_key"].startswith("0x")
+
+    # Verify the file was created with the generated name
+    key_file = temp_keys_dir / f"{data['name']}.json"
+    assert key_file.exists()
+
+
+async def test_generate_subkey_rejects_duplicate_name(temp_keys_dir):
+    await server.call_tool("paradex_generate_subkey", {"name": "dup-key"})
+
+    with pytest.raises(ToolError):
+        await server.call_tool("paradex_generate_subkey", {"name": "dup-key"})
+
+
+@pytest.mark.parametrize("bad_name", ["../evil", "has spaces", "has/slash", "semi;colon"])
+async def test_generate_subkey_rejects_invalid_name(temp_keys_dir, bad_name):
+    with pytest.raises(ToolError):
+        await server.call_tool("paradex_generate_subkey", {"name": bad_name})

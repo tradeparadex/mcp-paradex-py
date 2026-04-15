@@ -212,3 +212,10 @@ class PreTradeCheckResult(BaseModel):
     estimates: PreTradeEstimates
     ready_to_trade: bool
     not_ready_reasons: list[str]
+
+
+class GeneratedSubkey(BaseModel):
+    """Result of a locally generated StarkNet subkey."""
+
+    name: str = Field(description="Label for the generated key")
+    public_key: str = Field(description="StarkNet public key in hex format (0x...)")
