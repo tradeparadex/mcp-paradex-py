@@ -7,12 +7,12 @@
     "url": "https://github.com/tradeparadex/mcp-paradex-py",
     "source": "github"
   },
-  "version": "0.2.0",
+  "version": "0.2.5",
   "packages": [
     {
       "registryType": "pypi",
       "identifier": "mcp-paradex",
-      "version": "0.2.0",
+      "version": "0.2.5",
       "transport": {
         "type": "stdio"
       },

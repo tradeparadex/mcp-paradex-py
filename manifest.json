@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "mcp-paradex",
   "display_name": "Paradex Trading",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "MCP server for Paradex — multi-asset exchange with spot, perpetuals, options, and commodity futures.",
   "long_description": "Connect AI assistants to Paradex, a privacy-preserving multi-asset exchange. Trade spot pairs, perpetual futures, dated options, and commodity/TradFi futures. Access real-time market data including orderbooks, trades, funding rates, and klines. Monitor account positions, balances, and transaction history. Place and manage orders with support for market, limit, stop, and take-profit order types. Track vault performance, positions, and transfers. Supports both read-only market data access and authenticated trading when configured with account credentials.",
   "author": {
@@ -140,6 +140,10 @@
     {
       "name": "paradex_orders_history",
       "description": "Get historical orders for a market within a time range. Requires authentication."
+    },
+    {
+      "name": "paradex_generate_subkey",
+      "description": "Generate a StarkNet keypair for use as a Paradex subkey. Persists the private key locally and returns only the public key."
     }
   ],
   "user_config": {
