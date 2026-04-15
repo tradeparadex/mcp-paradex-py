@@ -13,9 +13,15 @@
       "registryType": "pypi",
       "identifier": "mcp-paradex",
       "version": "0.2.5",
-      "transport": {
-        "type": "stdio"
-      },
+      "transport": [
+        {
+          "type": "stdio"
+        },
+        {
+          "type": "streamableHttp",
+          "path": "/mcp"
+        }
+      ],
       "environmentVariables": [
         {
           "name": "PARADEX_ACCOUNT_PRIVATE_KEY",
@@ -27,6 +33,27 @@
         {
           "name": "PARADEX_ENVIRONMENT",
           "description": "Paradex environment to connect to. Defaults to 'prod'. Use 'testnet' for testing.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "MCP_TRANSPORT",
+          "description": "Transport to use: 'stdio' (default) or 'streamable-http'.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "MCP_PORT",
+          "description": "Port for streamable-http transport. Defaults to 3000.",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "MCP_STATELESS",
+          "description": "Enable stateless HTTP mode for Lambda/serverless deployments. Set to 'true' to enable.",
           "isRequired": false,
           "isSecret": false,
           "format": "string"
