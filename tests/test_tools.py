@@ -748,6 +748,38 @@ async def test_account_transactions_passes_params(auth_client):
 
 
 # ---------------------------------------------------------------------------
+# Account subkeys
+# ---------------------------------------------------------------------------
+
+SUBKEY_RECORD = {
+    "public_key": "0xabc123",
+    "label": "agent-key",
+    "status": "ACTIVE",
+    "created_at": 1_700_000_000_000,
+}
+
+
+async def test_account_subkeys_returns_results(auth_client):
+    auth_client.fetch_subkeys.return_value = {"results": [SUBKEY_RECORD]}
+
+    result = await server.call_tool("paradex_account_subkeys", {"include_revoked": False})
+    subkeys = result[1]["result"]
+
+    assert len(subkeys) == 1
+    assert subkeys[0]["public_key"] == "0xabc123"
+    assert subkeys[0]["status"] == "ACTIVE"
+    auth_client.fetch_subkeys.assert_called_once_with(params=None)
+
+
+async def test_account_subkeys_with_revoked(auth_client):
+    auth_client.fetch_subkeys.return_value = {"results": [SUBKEY_RECORD]}
+
+    await server.call_tool("paradex_account_subkeys", {"include_revoked": True})
+
+    auth_client.fetch_subkeys.assert_called_once_with(params={"include_revoked": True})
+
+
+# ---------------------------------------------------------------------------
 # Order create / history
 # ---------------------------------------------------------------------------
 

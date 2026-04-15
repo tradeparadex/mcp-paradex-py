@@ -144,6 +144,10 @@
     {
       "name": "paradex_generate_subkey",
       "description": "Generate a StarkNet keypair for use as a Paradex subkey. Persists the private key locally and returns only the public key."
+    },
+    {
+      "name": "paradex_account_subkeys",
+      "description": "List all subkeys registered for this account. Useful for verifying key setup and auditing subkey access. Requires authentication."
     }
   ],
   "user_config": {

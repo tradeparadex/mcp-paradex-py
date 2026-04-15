@@ -371,6 +371,45 @@ async def get_account_transactions(
 
 
 @server.tool(
+    name="paradex_account_subkeys",
+    title="Account Subkeys",
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+)
+async def get_account_subkeys(
+    include_revoked: Annotated[
+        bool,
+        Field(
+            default=False,
+            description="Include revoked subkeys in results.",
+        ),
+    ],
+    ctx: Context,
+) -> list[dict]:
+    """
+    List all subkeys registered for this account.
+
+    Use this tool when you need to:
+    - Verify that a generated subkey was successfully registered on Paradex
+    - Audit which subkeys have access to the account
+    - Check the status (active/revoked) of existing subkeys
+    - Confirm key setup before starting agent trading
+
+    Example use cases:
+    - After registering a subkey, list subkeys to confirm it appears
+    - Reviewing active subkeys to decide which to revoke
+    - Verifying agent key setup during onboarding
+    """
+    client = await get_authenticated_paradex_client()
+    params = {}
+    if include_revoked:
+        params["include_revoked"] = True
+    response = client.fetch_subkeys(params=params or None)
+    results = response.get("results", [])
+    await ctx_info(ctx, f"Found {len(results)} subkeys", logger_name="paradex.account")
+    return results
+
+
+@server.tool(
     name="paradex_pre_trade_check",
     title="Pre-Trade Check",
     annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
