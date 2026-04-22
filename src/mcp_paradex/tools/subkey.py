@@ -1,7 +1,7 @@
 """
 Subkey management tools for Paradex.
 
-This module provides tools for generating and managing StarkNet subkeys locally.
+This module provides tools for generating and managing Paradex subkeys locally.
 Private keys are persisted on disk and never leave the agent machine.
 """
 
@@ -65,7 +65,7 @@ async def generate_subkey(
     ctx: Context,
 ) -> GeneratedSubkey:
     """
-    Generate a StarkNet keypair for use as a Paradex subkey.
+    Generate a Paradex keypair for use as a subkey.
 
     The private key is persisted locally and never leaves the machine.
     Only the public key is returned so the frontend can register it on

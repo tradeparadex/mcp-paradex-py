@@ -234,11 +234,21 @@ SYSTEM_CONFIG_RESPONSE = {
 
 
 async def test_system_config_calls_correct_api_path(mock_client):
-    mock_client.get.return_value = SYSTEM_CONFIG_RESPONSE
+    # Tool now calls both system/config and system/portfolio-margin-config concurrently.
+    def _get_side_effect(url, path, params):
+        if path == "system/portfolio-margin-config":
+            return {"results": []}
+        return SYSTEM_CONFIG_RESPONSE
 
-    await server.call_tool("paradex_system_config", {})
+    mock_client.get.side_effect = _get_side_effect
 
-    mock_client.get.assert_called_once_with(mock_client.api_url, "system/config", None)
+    result = await server.call_tool("paradex_system_config", {})
+    data = _json(result)
+
+    assert data["config"]["starknet_chain_id"] == "0x534e5f4d41494e"
+    assert "portfolio_margin" in data
+    mock_client.get.assert_any_call(mock_client.api_url, "system/config", None)
+    mock_client.get.assert_any_call(mock_client.api_url, "system/portfolio-margin-config", None)
 
 
 # ---------------------------------------------------------------------------
@@ -700,10 +710,25 @@ VAULT_ACCOUNT_SUMMARY_RECORD = {
 # ---------------------------------------------------------------------------
 
 
+_ACCOUNT_INFO_ENTRY = {
+    "account": "0xabc123",
+    "kind": "main",
+    "username": "trader",
+    "fees": {"maker_rate": "0.0001", "taker_rate": "0.0003"},
+}
+
+_MARGIN_RESPONSE = {
+    "margin_methodology": "portfolio_margin",
+    "configs": [{"market": "BTC-USD-PERP", "margin_type": "CROSS", "leverage": 10}],
+}
+
+
 async def test_account_overview_returns_composite(auth_client, no_ctx_progress):
     auth_client.get.return_value = ACCOUNT_RESPONSE
     auth_client.fetch_balances.return_value = {"results": [BALANCE_RECORD]}
     auth_client.fetch_positions.return_value = {"results": [POSITION_RECORD]}
+    # account/info and account/margin are fetched concurrently; provide minimal stubs.
+    auth_client.fetch_account_info.return_value = {"results": []}
 
     result = await server.call_tool("paradex_account_overview", {})
     data = _json(result)
@@ -712,6 +737,40 @@ async def test_account_overview_returns_composite(auth_client, no_ctx_progress):
     assert len(data["balances"]) == 1
     assert len(data["positions"]) == 1
     assert data["positions"][0]["market"] == "BTC-USD-PERP"
+
+
+async def test_account_overview_includes_info_and_margin(auth_client, no_ctx_progress):
+    def _get(url, path, params):
+        if path == "account/margin":
+            return _MARGIN_RESPONSE
+        return ACCOUNT_RESPONSE
+
+    auth_client.get.side_effect = _get
+    auth_client.fetch_balances.return_value = {"results": [BALANCE_RECORD]}
+    auth_client.fetch_positions.return_value = {"results": [POSITION_RECORD]}
+    auth_client.fetch_account_info.return_value = {"results": [_ACCOUNT_INFO_ENTRY]}
+
+    result = await server.call_tool("paradex_account_overview", {})
+    data = _json(result)
+
+    assert data["info"]["kind"] == "main"
+    assert data["info"]["fees"]["taker_rate"] == "0.0003"
+    assert data["margin"]["margin_methodology"] == "portfolio_margin"
+    assert data["margin"]["configs"][0]["market"] == "BTC-USD-PERP"
+
+
+async def test_account_overview_info_margin_optional_on_failure(auth_client, no_ctx_progress):
+    """Overview succeeds even if account/info or account/margin calls fail."""
+    auth_client.get.return_value = ACCOUNT_RESPONSE
+    auth_client.fetch_balances.return_value = {"results": [BALANCE_RECORD]}
+    auth_client.fetch_positions.return_value = {"results": [POSITION_RECORD]}
+    auth_client.fetch_account_info.side_effect = Exception("unavailable")
+
+    result = await server.call_tool("paradex_account_overview", {})
+    data = _json(result)
+
+    assert data["summary"]["account"] == "0xabc123"
+    assert data["info"] is None
 
 
 async def test_account_fills_passes_params(auth_client):
@@ -748,35 +807,119 @@ async def test_account_transactions_passes_params(auth_client):
 
 
 # ---------------------------------------------------------------------------
-# Account subkeys
+# Account keys (subkeys + tokens)
 # ---------------------------------------------------------------------------
 
 SUBKEY_RECORD = {
     "public_key": "0xabc123",
     "label": "agent-key",
-    "status": "ACTIVE",
+    "state": "ACTIVE",
     "created_at": 1_700_000_000_000,
 }
 
 
-async def test_account_subkeys_returns_results(auth_client):
+async def test_account_keys_returns_credentials(auth_client):
     auth_client.fetch_subkeys.return_value = {"results": [SUBKEY_RECORD]}
+    auth_client.get.return_value = {"results": []}  # empty tokens
 
-    result = await server.call_tool("paradex_account_subkeys", {"include_revoked": False})
-    subkeys = result[1]["result"]
+    result = await server.call_tool("paradex_account_keys", {"include_revoked": False})
+    data = _json(result)
 
-    assert len(subkeys) == 1
-    assert subkeys[0]["public_key"] == "0xabc123"
-    assert subkeys[0]["status"] == "ACTIVE"
+    assert len(data["subkeys"]) == 1
+    assert data["subkeys"][0]["public_key"] == "0xabc123"
+    assert data["subkeys"][0]["state"] == "ACTIVE"
+    assert data["tokens"] == []
     auth_client.fetch_subkeys.assert_called_once_with(params=None)
 
 
-async def test_account_subkeys_with_revoked(auth_client):
+async def test_account_keys_with_revoked(auth_client):
     auth_client.fetch_subkeys.return_value = {"results": [SUBKEY_RECORD]}
+    auth_client.get.return_value = {"results": []}
 
-    await server.call_tool("paradex_account_subkeys", {"include_revoked": True})
+    await server.call_tool("paradex_account_keys", {"include_revoked": True})
 
     auth_client.fetch_subkeys.assert_called_once_with(params={"include_revoked": True})
+
+
+TOKEN_RECORD = {
+    "token_id": "tok-1",
+    "lookup_id": "lkp-1",
+    "name": "My API Key",
+    "kind": "api_key",
+    "created_at": 1_700_000_000_000,
+    "expiry_at": 1_800_000_000_000,
+    "revoked_at": 0,
+}
+
+
+async def test_account_keys_returns_tokens(auth_client):
+    auth_client.fetch_subkeys.return_value = {"results": []}
+    auth_client.get.return_value = {"results": [TOKEN_RECORD]}
+
+    result = await server.call_tool("paradex_account_keys", {})
+    data = _json(result)
+
+    assert data["subkeys"] == []
+    assert len(data["tokens"]) == 1
+    assert data["tokens"][0]["token_id"] == "tok-1"
+    assert data["tokens"][0]["kind"] == "api_key"
+
+
+async def test_account_keys_with_invalid_tokens(auth_client):
+    auth_client.fetch_subkeys.return_value = {"results": []}
+    auth_client.get.return_value = {"results": []}
+
+    await server.call_tool("paradex_account_keys", {"with_invalid_tokens": True})
+
+    auth_client.get.assert_called_once_with(
+        auth_client.api_url, "account/tokens", {"with_invalid": True}
+    )
+
+
+# ---------------------------------------------------------------------------
+# Account profile
+# ---------------------------------------------------------------------------
+
+_PROFILE_RESPONSE = {
+    "username": "trader",
+    "referral_code": "MYCODE",
+    "market_max_slippage": {"BTC-USD-PERP": "0.05"},
+    "tap_status": "ACTIVE",
+}
+
+_SETTINGS_RESPONSE = {"trading_value_display": "SPOT_NOTIONAL"}
+
+
+async def test_account_profile_returns_profile_and_settings(auth_client):
+    def _get(url, path, params):
+        if path == "account/settings":
+            return _SETTINGS_RESPONSE
+        return _PROFILE_RESPONSE
+
+    auth_client.get.side_effect = _get
+
+    result = await server.call_tool("paradex_account_profile", {})
+    data = _json(result)
+
+    assert data["profile"]["username"] == "trader"
+    assert data["profile"]["referral_code"] == "MYCODE"
+    assert data["settings"]["trading_value_display"] == "SPOT_NOTIONAL"
+
+
+async def test_account_profile_partial_on_failure(auth_client):
+    """Profile returns whatever succeeds; missing key is absent (not raised)."""
+    def _get(url, path, params):
+        if path == "account/settings":
+            raise Exception("unavailable")
+        return _PROFILE_RESPONSE
+
+    auth_client.get.side_effect = _get
+
+    result = await server.call_tool("paradex_account_profile", {})
+    data = _json(result)
+
+    assert data["profile"]["username"] == "trader"
+    assert "settings" not in data
 
 
 # ---------------------------------------------------------------------------

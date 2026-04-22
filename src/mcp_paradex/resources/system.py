@@ -30,8 +30,9 @@ async def get_system_config() -> dict[str, Any]:
         "environment": config.ENVIRONMENT,
         "status": "operational",
         "features": [
-            "perpetual_futures",
-            "perpetual_options",
+            "spot",
+            "perpetuals",
+            "options",
             "vaults",
         ],
         "trading_hours": "24/7",

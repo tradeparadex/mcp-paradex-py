@@ -7,13 +7,13 @@ These tools help with monitoring the exchange status and retrieving
 global parameters that affect trading operations.
 """
 
+import asyncio
 import logging
 
 from mcp.server.fastmcp.server import Context
 from mcp.types import ToolAnnotations
-from paradex_py.api.models import SystemConfig, SystemConfigSchema
 
-from mcp_paradex.models import SystemState
+from mcp_paradex.models import PortfolioMarginAssetConfig, SystemConfigResult, SystemState
 from mcp_paradex.server.server import server
 from mcp_paradex.utils.ctx import ctx_info
 from mcp_paradex.utils.paradex_client import api_call, get_paradex_client
@@ -26,30 +26,36 @@ logger = logging.getLogger(__name__)
     title="System Configuration",
     annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
-async def get_system_config(ctx: Context) -> SystemConfig:
+async def get_system_config(ctx: Context) -> SystemConfigResult:
     """
-    Understand the exchange's global parameters that affect all trading activity.
+    Understand the exchange's global parameters and portfolio margin risk factors.
 
     Use this tool when you need to:
     - Check fee schedules before placing trades
     - Verify trading limits and restrictions
     - Understand exchange-wide parameters that affect your trading
-    - Keep up with changes to the exchange's configuration
+    - Review portfolio margin factors (hedged/unhedged margin, vol-shock params) per asset
 
-    This information provides important context for making trading decisions and
-    understanding how the exchange operates.
+    Returns:
+    - config: raw system configuration (contract addresses, chain IDs, fee tiers, etc.)
+    - portfolio_margin: per-asset portfolio margin parameters used in PM calculations
 
     Example use cases:
     - Checking current fee tiers for different markets
     - Verifying maximum leverage available for specific markets
-    - Understanding global trading limits or restrictions
-    - Checking if any exchange-wide changes might affect your trading strategy
+    - Reviewing portfolio margin risk factors before switching margin methodology
     """
     try:
         client = await get_paradex_client()
-        response = await api_call(client, "system/config")
-        system_config = SystemConfigSchema().load(response, unknown="exclude", partial=True)
-        return system_config
+        config_resp, pm_resp = await asyncio.gather(
+            api_call(client, "system/config"),
+            api_call(client, "system/portfolio-margin-config"),
+        )
+        pm_items = [
+            PortfolioMarginAssetConfig.model_validate(item)
+            for item in pm_resp.get("results", [])
+        ]
+        return SystemConfigResult(config=config_resp, portfolio_margin=pm_items)
     except Exception as e:
         await ctx.error(f"Error fetching system configuration: {e!s}")
         raise e

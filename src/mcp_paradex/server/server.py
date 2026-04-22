@@ -205,6 +205,32 @@ def create_server() -> FastMCP:
     # Create server instance
     server = FastMCP(
         name=config.SERVER_NAME,
+        instructions="""Paradex MCP Server — spot, perpetuals, and options trading on the Paradex chain.
+
+Authentication: Set PARADEX_ACCOUNT_PRIVATE_KEY for account/trading tools.
+Market data tools work without authentication.
+
+Tool categories:
+• System     — paradex_system_config (exchange config + portfolio margin params),
+               paradex_system_state (operational status)
+• Market     — paradex_markets, paradex_market_summaries, paradex_bbo,
+               paradex_orderbook, paradex_klines, paradex_trades, paradex_funding_data
+• Account    — paradex_account_overview (live: margin, fees, balances, positions,
+               margin mode), paradex_account_summary, paradex_account_balance,
+               paradex_account_positions, paradex_account_fills,
+               paradex_account_transactions, paradex_account_funding_payments,
+               paradex_account_profile (static: username, referral, slippage, settings)
+• Orders     — paradex_open_orders, paradex_orders_history, paradex_order_status,
+               paradex_create_order, paradex_cancel_orders
+• Pre-trade  — paradex_pre_trade_check (collateral check, size validation, fee estimate)
+• Keys       — paradex_account_keys (Paradex subkeys + JWT/API tokens in one call),
+               paradex_generate_subkey (generate Paradex keypair locally)
+• Vaults     — paradex_vaults, paradex_vault_overview, paradex_vault_summary,
+               paradex_vault_balance, paradex_vault_positions,
+               paradex_vault_transfers, paradex_vault_account_summary
+
+Start with paradex_account_overview for a full live snapshot, or
+paradex_system_state to confirm the exchange is operational.""",
     )
 
     return server

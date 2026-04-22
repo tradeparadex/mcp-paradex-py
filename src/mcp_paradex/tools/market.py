@@ -313,8 +313,8 @@ async def get_funding_data(
     - Understand historical funding patterns for a market
     - Evaluate the cost of holding a position over time
 
-    This data is critical for perpetual futures traders to assess the carrying cost
-    of positions and identify potential funding arbitrage opportunities.
+    This data is critical for assessing the carrying cost of positions
+    and identifying potential funding arbitrage opportunities.
 
     Example use cases:
     - Finding markets with negative funding for "paid to hold" opportunities

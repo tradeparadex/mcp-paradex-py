@@ -8,10 +8,16 @@ defined locally.
 
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Any
 
 from paradex_py.api.generated.responses import (
+    AccountInfoResponse,
+)
+from paradex_py.api.generated.responses import (
     AccountSummaryResponse as AccountSummary,
+)
+from paradex_py.api.generated.responses import (
+    ApiToken,
 )
 from paradex_py.api.generated.responses import (
     BalanceResp as Balance,
@@ -24,6 +30,9 @@ from paradex_py.api.generated.responses import (
 )
 from paradex_py.api.generated.responses import (
     FundingDataResult as FundingData,
+)
+from paradex_py.api.generated.responses import (
+    GetAccountMarginConfigsResp as AccountMarginConfig,
 )
 from paradex_py.api.generated.responses import (
     Greeks,
@@ -48,6 +57,9 @@ from paradex_py.api.generated.responses import (
 )
 from paradex_py.api.generated.responses import (
     PositionResp as Position,
+)
+from paradex_py.api.generated.responses import (
+    Subkey,
 )
 from paradex_py.api.generated.responses import (
     Strategy as VaultStrategy,
@@ -132,6 +144,43 @@ class PagedOrderStates(BaseModel):
     offset: int
 
 
+# Account credential model (combines two SDK types)
+class AccountCredentials(BaseModel):
+    """All credentials registered for this account."""
+
+    subkeys: list[Subkey] = Field(description="Paradex subkeys used for on-chain signing.")
+    tokens: list[ApiToken] = Field(description="API tokens (JWTs / API keys) for REST access.")
+
+
+# Portfolio margin models (not in SDK)
+class PortfolioMarginVolShock(BaseModel):
+    """Volatility shock parameters for portfolio margin calculations."""
+
+    dte_floor_days: float | None = None
+    min_vol_shock_up: float | None = None
+    vega_power_long_dte: float | None = None
+    vega_power_short_dte: float | None = None
+
+
+class PortfolioMarginAssetConfig(BaseModel):
+    """Portfolio margin parameters for a single base asset."""
+
+    base_asset: str
+    hedged_margin_factor: str | None = None
+    unhedged_margin_factor: str | None = None
+    mmf_factor: str | None = Field(
+        default=None, description="Margin multiplier factor for concentration risk."
+    )
+    vol_shock_params: PortfolioMarginVolShock | None = None
+
+
+class SystemConfigResult(BaseModel):
+    """System configuration combined with portfolio margin parameters."""
+
+    config: dict[str, Any]
+    portfolio_margin: list[PortfolioMarginAssetConfig]
+
+
 # Composite overview models
 class AccountOverview(BaseModel):
     """Complete account snapshot with margin health, token balances, and open positions."""
@@ -139,6 +188,12 @@ class AccountOverview(BaseModel):
     summary: AccountSummary
     balances: list[Balance]
     positions: list[Position]
+    info: AccountInfo | None = Field(
+        default=None, description="Account fees, kind, and isolation mode."
+    )
+    margin: AccountMarginConfig | None = Field(
+        default=None, description="Margin methodology and per-market leverage config."
+    )
 
 
 class VaultOverview(BaseModel):
@@ -215,7 +270,11 @@ class PreTradeCheckResult(BaseModel):
 
 
 class GeneratedSubkey(BaseModel):
-    """Result of a locally generated StarkNet subkey."""
+    """Result of a locally generated Paradex subkey."""
 
     name: str = Field(description="Label for the generated key")
-    public_key: str = Field(description="StarkNet public key in hex format (0x...)")
+    public_key: str = Field(description="Paradex public key in hex format (0x...)")
+
+
+# Type alias for backward-compat in tool files
+AccountInfo = AccountInfoResponse

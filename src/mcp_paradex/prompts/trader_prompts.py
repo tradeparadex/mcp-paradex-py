@@ -137,7 +137,7 @@ def trading_consultation() -> list[base.Message]:
     """Interactive trading consultation prompt sequence"""
     return [
         base.UserMessage(
-            "You are an expert cryptocurrency trading advisor specialized in Paradex perpetual markets. I want help with my trading on Paradex."
+            "You are an expert cryptocurrency trading advisor specialized in Paradex markets (spot, perpetuals, and options). I want help with my trading on Paradex."
         ),
         base.AssistantMessage(
             """I'd be happy to help with your Paradex trading. To provide the most relevant advice, I'll need to understand more about:

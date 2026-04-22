@@ -3,15 +3,19 @@ Account management tools.
 """
 
 import asyncio
-from typing import Annotated
+from typing import Annotated, Any
 
 from mcp.server.fastmcp.server import Context
 from mcp.types import ToolAnnotations
 from pydantic import Field, TypeAdapter
 
 from mcp_paradex.models import (
+    AccountCredentials,
+    AccountInfo,
+    AccountMarginConfig,
     AccountOverview,
     AccountSummary,
+    ApiToken,
     Balance,
     Fill,
     MarketDetails,
@@ -21,6 +25,7 @@ from mcp_paradex.models import (
     PreTradeCheckResult,
     PreTradeEstimates,
     PreTradeMarketConstraints,
+    Subkey,
     Transaction,
 )
 from mcp_paradex.server.server import server
@@ -206,7 +211,7 @@ async def get_account_positions(ctx: Context) -> list[Position]:
 async def get_account_overview(ctx: Context) -> AccountOverview:
     """
     Get a complete snapshot of your account: margin health, token balances,
-    and all open positions in a single call.
+    open positions, fee rates, and margin methodology in a single call.
 
     Use this instead of calling paradex_account_summary, paradex_account_balance,
     and paradex_account_positions separately.
@@ -215,28 +220,61 @@ async def get_account_overview(ctx: Context) -> AccountOverview:
     - summary: account value, free collateral, margin requirements, health status
     - balances: token balances (USDC, DIME, etc.)
     - positions: all open positions with P&L and liquidation prices
+    - info: account fees (maker/taker rates for all product types), account kind,
+      and isolation mode if applicable
+    - margin: margin methodology (cross_margin or portfolio_margin) and per-market
+      leverage/margin-type configuration
     """
     client = await get_authenticated_paradex_client()
 
-    await ctx.report_progress(0, 3, "Fetching account summary...")
-    summary_resp = await api_call(client, "account")
+    await ctx.report_progress(0, 2, "Fetching account data...")
 
-    await ctx.report_progress(1, 3, "Fetching balances...")
-    balances_resp = client.fetch_balances()
+    (
+        summary_resp,
+        balances_resp,
+        positions_resp,
+        info_resp,
+        margin_resp,
+    ) = await asyncio.gather(
+        api_call(client, "account"),
+        asyncio.to_thread(client.fetch_balances),
+        asyncio.to_thread(client.fetch_positions),
+        asyncio.to_thread(client.fetch_account_info),
+        api_call(client, "account/margin"),
+        return_exceptions=True,
+    )
+
+    await ctx.report_progress(1, 2, "Building overview...")
+
+    if isinstance(summary_resp, Exception):
+        raise summary_resp
+    if isinstance(balances_resp, Exception):
+        raise balances_resp
+    if isinstance(positions_resp, Exception):
+        raise positions_resp
     if "error" in balances_resp:
         await ctx.error(balances_resp["error"])
         raise Exception(balances_resp["error"])
-
-    await ctx.report_progress(2, 3, "Fetching positions...")
-    positions_resp = client.fetch_positions()
     if "error" in positions_resp:
         await ctx.error(positions_resp["error"])
         raise Exception(positions_resp["error"])
+
+    info: AccountInfo | None = None
+    if not isinstance(info_resp, Exception):
+        info_list = (info_resp or {}).get("results", [])
+        if info_list:
+            info = AccountInfo.model_validate(info_list[0])
+
+    margin: AccountMarginConfig | None = None
+    if not isinstance(margin_resp, Exception):
+        margin = AccountMarginConfig.model_validate(margin_resp)
 
     return AccountOverview(
         summary=account_summary_adapter.validate_python(summary_resp),
         balances=balance_adapter.validate_python(balances_resp["results"]),
         positions=position_adapter.validate_python(positions_resp["results"]),
+        info=info,
+        margin=margin,
     )
 
 
@@ -305,7 +343,7 @@ async def get_account_funding_payments(
     - Compare funding costs across different markets
     - Account for funding in your trading strategy profitability
 
-    Funding payments can significantly impact perpetual futures trading P&L,
+    Funding payments can significantly impact trading P&L,
     especially for longer-term positions or in markets with volatile funding rates.
 
     Example use cases:
@@ -371,42 +409,109 @@ async def get_account_transactions(
 
 
 @server.tool(
-    name="paradex_account_subkeys",
-    title="Account Subkeys",
+    name="paradex_account_keys",
+    title="Account Keys & Tokens",
     annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
 )
-async def get_account_subkeys(
+async def get_account_keys(
     include_revoked: Annotated[
         bool,
-        Field(
-            default=False,
-            description="Include revoked subkeys in results.",
-        ),
+        Field(default=False, description="Include revoked subkeys in results."),
+    ],
+    with_invalid_tokens: Annotated[
+        bool,
+        Field(default=False, description="Include expired or revoked API tokens."),
     ],
     ctx: Context,
-) -> list[dict]:
+) -> AccountCredentials:
     """
-    List all subkeys registered for this account.
+    List all credentials registered for this account: Paradex subkeys and API tokens.
 
     Use this tool when you need to:
+    - Audit which subkeys and API tokens have access to the account
     - Verify that a generated subkey was successfully registered on Paradex
-    - Audit which subkeys have access to the account
-    - Check the status (active/revoked) of existing subkeys
+    - Check token expiry dates or identify revoked tokens
     - Confirm key setup before starting agent trading
 
+    Returns:
+    - subkeys: Paradex keypairs registered for on-chain signing (e.g. agent keys)
+    - tokens: JWT / API key tokens for REST API access
+
     Example use cases:
-    - After registering a subkey, list subkeys to confirm it appears
-    - Reviewing active subkeys to decide which to revoke
-    - Verifying agent key setup during onboarding
+    - After registering a subkey, list keys to confirm it appears as active
+    - Reviewing active tokens to identify any that are near expiry
+    - Verifying agent credential setup during onboarding
     """
     client = await get_authenticated_paradex_client()
-    params = {}
+    subkey_params: dict[str, Any] = {}
     if include_revoked:
-        params["include_revoked"] = True
-    response = client.fetch_subkeys(params=params or None)
-    results = response.get("results", [])
-    await ctx_info(ctx, f"Found {len(results)} subkeys", logger_name="paradex.account")
-    return results
+        subkey_params["include_revoked"] = True
+    token_params: dict[str, Any] = {}
+    if with_invalid_tokens:
+        token_params["with_invalid"] = True
+
+    subkeys_resp, tokens_resp = await asyncio.gather(
+        asyncio.to_thread(client.fetch_subkeys, params=subkey_params or None),
+        api_call(client, "account/tokens", params=token_params or None),
+        return_exceptions=True,
+    )
+
+    subkeys: list[Subkey] = (
+        [Subkey.model_validate(r) for r in (subkeys_resp or {}).get("results", [])]
+        if not isinstance(subkeys_resp, Exception)
+        else []
+    )
+    tokens: list[ApiToken] = (
+        [ApiToken.model_validate(t) for t in (tokens_resp or {}).get("results", [])]
+        if not isinstance(tokens_resp, Exception)
+        else []
+    )
+
+    await ctx_info(
+        ctx,
+        f"Found {len(subkeys)} subkeys, {len(tokens)} tokens",
+        logger_name="paradex.account",
+    )
+    return AccountCredentials(subkeys=subkeys, tokens=tokens)
+
+
+@server.tool(
+    name="paradex_account_profile",
+    title="Account Profile & Settings",
+    annotations=ToolAnnotations(readOnlyHint=True, idempotentHint=True),
+)
+async def get_account_profile(ctx: Context) -> dict[str, Any]:
+    """
+    Get static account profile and display settings.
+
+    Use this tool when you need to:
+    - Check your username or referral code
+    - Review per-market max slippage limits
+    - Inspect referral configuration (commission rate, discount rate, minimum volume)
+    - Check TAP affiliate status and share rates
+    - Review notification preferences or linked social accounts
+    - See the AI agent WebSocket URL for this account
+
+    This data changes infrequently. For live financial data (balances, positions,
+    margin health, fee rates), use paradex_account_overview instead.
+
+    Returns:
+    - profile: username, referral config, market_max_slippage, notifications,
+      social links, TAP/XP rates, NFT holdings, AI agent URL
+    - settings: trading_value_display preference (SPOT_NOTIONAL or MARKET_VALUE)
+    """
+    client = await get_authenticated_paradex_client()
+    profile_resp, settings_resp = await asyncio.gather(
+        api_call(client, "account/profile"),
+        api_call(client, "account/settings"),
+        return_exceptions=True,
+    )
+    result: dict[str, Any] = {}
+    if not isinstance(profile_resp, Exception):
+        result["profile"] = profile_resp
+    if not isinstance(settings_resp, Exception):
+        result["settings"] = settings_resp
+    return result
 
 
 @server.tool(
