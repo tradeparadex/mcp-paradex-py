@@ -52,8 +52,7 @@ async def get_system_config(ctx: Context) -> SystemConfigResult:
             api_call(client, "system/portfolio-margin-config"),
         )
         pm_items = [
-            PortfolioMarginAssetConfig.model_validate(item)
-            for item in pm_resp.get("results", [])
+            PortfolioMarginAssetConfig.model_validate(item) for item in pm_resp.get("results", [])
         ]
         return SystemConfigResult(config=config_resp, portfolio_margin=pm_items)
     except Exception as e:

@@ -908,6 +908,7 @@ async def test_account_profile_returns_profile_and_settings(auth_client):
 
 async def test_account_profile_partial_on_failure(auth_client):
     """Profile returns whatever succeeds; missing key is absent (not raised)."""
+
     def _get(url, path, params):
         if path == "account/settings":
             raise Exception("unavailable")

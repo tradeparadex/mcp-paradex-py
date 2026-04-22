@@ -12,12 +12,12 @@ from typing import Annotated, Any
 
 from paradex_py.api.generated.responses import (
     AccountInfoResponse,
+    ApiToken,
+    Greeks,
+    Subkey,
 )
 from paradex_py.api.generated.responses import (
     AccountSummaryResponse as AccountSummary,
-)
-from paradex_py.api.generated.responses import (
-    ApiToken,
 )
 from paradex_py.api.generated.responses import (
     BalanceResp as Balance,
@@ -33,9 +33,6 @@ from paradex_py.api.generated.responses import (
 )
 from paradex_py.api.generated.responses import (
     GetAccountMarginConfigsResp as AccountMarginConfig,
-)
-from paradex_py.api.generated.responses import (
-    Greeks,
 )
 from paradex_py.api.generated.responses import (
     MarketResp as MarketDetails,
@@ -57,9 +54,6 @@ from paradex_py.api.generated.responses import (
 )
 from paradex_py.api.generated.responses import (
     PositionResp as Position,
-)
-from paradex_py.api.generated.responses import (
-    Subkey,
 )
 from paradex_py.api.generated.responses import (
     Strategy as VaultStrategy,
