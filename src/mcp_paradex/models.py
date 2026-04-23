@@ -155,7 +155,6 @@ class AccountCredentials(BaseModel):
     tokens: list[ApiToken] = Field(description="API tokens (JWTs / API keys) for REST access.")
 
 
-
 class SystemConfigResult(BaseModel):
     """System configuration combined with portfolio margin parameters."""
 
