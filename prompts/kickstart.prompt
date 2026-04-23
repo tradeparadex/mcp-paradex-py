@@ -12,7 +12,7 @@ paradex samples -  https://github.com/tradeparadex/code-samples
 Swagger API spec - https://api.prod.paradex.trade/swagger/doc.json
 
 
-Model Context Protocol (MCP) information 
+Model Context Protocol (MCP) information
 MCP - https://modelcontextprotocol.io/llms-full.txt
 MCP Python SDK - https://github.com/modelcontextprotocol/python-sdk/blob/main/README.md
 

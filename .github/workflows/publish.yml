@@ -11,29 +11,29 @@ jobs:
     environment: release
     permissions:
       contents: read
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Install uv
       uses: astral-sh/setup-uv@v5
       with:
         python-version: "3.10"
         enable-cache: true
-    
+
     - name: Build package
       run: uv build
 
     - name: Check package
       run: uvx twine check dist/*
-    
+
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         password: ${{ secrets.PYPI_API_TOKEN }}
         print-hash: true
-        
+
   mcpb:
     runs-on: ubuntu-latest
     permissions:
@@ -75,25 +75,25 @@ jobs:
         VERSION=${GITHUB_REF#refs/tags/v}
         echo "version=${VERSION}" >> $GITHUB_OUTPUT
         echo "Installing version: ${VERSION}"
-      
+
     - name: Wait for PyPI propagation
       run: sleep 120  # Increased to 2 minutes for better reliability
-      
+
     - name: Install specific version from PyPI
       run: |
         # Install the exact version that was just published
         pip install mcp-paradex==${{ steps.version.outputs.version }}
-      
+
     - name: Test installation
       run: |
         # Test imports first
         python -c "import mcp_paradex; print('Package imported successfully')"
-        
+
         # Verify correct version is installed
         python -c "import mcp_paradex; print(f'Installed version: {mcp_paradex.__version__ if hasattr(mcp_paradex, \"__version__\") else \"unknown\"}')"
-        
+
         # Show where the CLI script is installed
         which mcp-paradex || echo "mcp-paradex not found in PATH"
-        
+
         # Try running with python -m
         python -m mcp_paradex --help

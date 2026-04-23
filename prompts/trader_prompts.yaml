@@ -328,4 +328,4 @@ prompts:
            * Step-by-step implementation instructions
          - Design contingency plans for rapid market movements
       Parameters: {safety_threshold_hours} (default 48), {max_liquidation_probability} (default 5%), {risk_tolerance} (default 'moderate', options: 'conservative', 'moderate', 'aggressive')
-      Output: Comprehensive liquidation protection plan with position-specific actions, prioritized by urgency and efficiency, with exact implementation parameters." 
+      Output: Comprehensive liquidation protection plan with position-specific actions, prioritized by urgency and efficiency, with exact implementation parameters."

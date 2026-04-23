@@ -12,7 +12,7 @@ paradex samples -  https://github.com/tradeparadex/code-samples
 Swagger API spec - https://api.prod.paradex.trade/swagger/doc.json
 
 
-Model Context Protocol (MCP) information 
+Model Context Protocol (MCP) information
 MCP - https://modelcontextprotocol.io/llms-full.txt
 MCP Python SDK - https://github.com/modelcontextprotocol/python-sdk/blob/main/README.md
 
@@ -210,7 +210,7 @@ async def get_market_price(symbol: str) -> str:
 
 # Order placement tool example
 @paradex_mcp.tool()
-async def place_order(symbol: str, side: str, order_type: str, 
+async def place_order(symbol: str, side: str, order_type: str,
                      quantity: float, price: float = None) -> str:
     """Place an order on Paradex"""
     # Implementation using Paradex SDK
@@ -225,8 +225,8 @@ from paradex_py.environment import Environment
 # Paradex client initialization
 async def initialize_paradex_client(l1_address, l1_private_key, environment=Environment.TESTNET):
     """Initialize Paradex client with authentication"""
-    paradex = Paradex(env=environment, 
-                     l1_address=l1_address, 
+    paradex = Paradex(env=environment,
+                     l1_address=l1_address,
                      l1_private_key=l1_private_key)
     return paradex
 
