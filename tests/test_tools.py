@@ -233,6 +233,25 @@ SYSTEM_CONFIG_RESPONSE = {
 }
 
 
+PM_ASSET_RESPONSE = {
+    "base_asset": "BTC",
+    "funding_provision_hour": 8.0,
+    "hedged_margin_factor": 0.01,
+    "unhedged_margin_factor": 0.02,
+    "mmf_factor": 0.5,
+    "scenarios": [
+        {"spot_shock": 0.16, "vol_shock": 0.4, "weight": 1.0},
+        {"spot_shock": -0.16, "vol_shock": 0.4, "weight": 1.0},
+    ],
+    "vol_shock_params": {
+        "dte_floor_days": 1.0,
+        "min_vol_shock_up": 0.4,
+        "vega_power_long_dte": 0.13,
+        "vega_power_short_dte": 0.3,
+    },
+}
+
+
 async def test_system_config_calls_correct_api_path(mock_client):
     # Tool now calls both system/config and system/portfolio-margin-config concurrently.
     def _get_side_effect(url, path, params):
@@ -249,6 +268,66 @@ async def test_system_config_calls_correct_api_path(mock_client):
     assert "portfolio_margin" in data
     mock_client.get.assert_any_call(mock_client.api_url, "system/config", None)
     mock_client.get.assert_any_call(mock_client.api_url, "system/portfolio-margin-config", None)
+
+
+async def test_system_config_portfolio_margin_field_types(mock_client):
+    """PM factor fields must be floats (not strings) and nested objects parsed."""
+
+    def _get_side_effect(url, path, params):
+        if path == "system/portfolio-margin-config":
+            return {"results": [PM_ASSET_RESPONSE]}
+        return SYSTEM_CONFIG_RESPONSE
+
+    mock_client.get.side_effect = _get_side_effect
+
+    result = await server.call_tool("paradex_system_config", {})
+    data = _json(result)
+
+    pm = data["portfolio_margin"]
+    assert len(pm) == 1
+    asset = pm[0]
+
+    assert asset["base_asset"] == "BTC"
+    assert isinstance(asset["hedged_margin_factor"], float)
+    assert asset["hedged_margin_factor"] == 0.01
+    assert isinstance(asset["unhedged_margin_factor"], float)
+    assert asset["unhedged_margin_factor"] == 0.02
+    assert isinstance(asset["mmf_factor"], float)
+    assert asset["mmf_factor"] == 0.5
+    assert asset["funding_provision_hour"] == 8.0
+
+    scenarios = asset["scenarios"]
+    assert len(scenarios) == 2
+    assert isinstance(scenarios[0]["spot_shock"], float)
+    assert scenarios[0]["spot_shock"] == 0.16
+    assert scenarios[1]["spot_shock"] == -0.16
+
+    vsp = asset["vol_shock_params"]
+    assert vsp["dte_floor_days"] == 1.0
+    assert vsp["min_vol_shock_up"] == 0.4
+    assert vsp["vega_power_long_dte"] == 0.13
+    assert vsp["vega_power_short_dte"] == 0.3
+
+
+async def test_system_config_portfolio_margin_multiple_assets(mock_client):
+    """All assets in the PM response are returned."""
+    eth_asset = {**PM_ASSET_RESPONSE, "base_asset": "ETH", "hedged_margin_factor": 0.02}
+
+    def _get_side_effect(url, path, params):
+        if path == "system/portfolio-margin-config":
+            return {"results": [PM_ASSET_RESPONSE, eth_asset]}
+        return SYSTEM_CONFIG_RESPONSE
+
+    mock_client.get.side_effect = _get_side_effect
+
+    result = await server.call_tool("paradex_system_config", {})
+    data = _json(result)
+
+    pm = data["portfolio_margin"]
+    assert len(pm) == 2
+    assert pm[0]["base_asset"] == "BTC"
+    assert pm[1]["base_asset"] == "ETH"
+    assert pm[1]["hedged_margin_factor"] == 0.02
 
 
 # ---------------------------------------------------------------------------

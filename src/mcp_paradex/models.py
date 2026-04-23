@@ -53,6 +53,12 @@ from paradex_py.api.generated.responses import (
     OrderType as OrderTypeEnum,
 )
 from paradex_py.api.generated.responses import (
+    PortfolioMarginParamsResp as PortfolioMarginAssetConfig,
+)
+from paradex_py.api.generated.responses import (
+    PortfolioMarginScenarioResp as PortfolioMarginScenario,
+)
+from paradex_py.api.generated.responses import (
     PositionResp as Position,
 )
 from paradex_py.api.generated.responses import (
@@ -72,6 +78,9 @@ from paradex_py.api.generated.responses import (
 )
 from paradex_py.api.generated.responses import (
     VaultSummaryResp as VaultSummary,
+)
+from paradex_py.api.generated.responses import (
+    VolShockParamsResp as PortfolioMarginVolShock,
 )
 from pydantic import BaseModel, Field
 
@@ -145,27 +154,6 @@ class AccountCredentials(BaseModel):
     subkeys: list[Subkey] = Field(description="Paradex subkeys used for on-chain signing.")
     tokens: list[ApiToken] = Field(description="API tokens (JWTs / API keys) for REST access.")
 
-
-# Portfolio margin models (not in SDK)
-class PortfolioMarginVolShock(BaseModel):
-    """Volatility shock parameters for portfolio margin calculations."""
-
-    dte_floor_days: float | None = None
-    min_vol_shock_up: float | None = None
-    vega_power_long_dte: float | None = None
-    vega_power_short_dte: float | None = None
-
-
-class PortfolioMarginAssetConfig(BaseModel):
-    """Portfolio margin parameters for a single base asset."""
-
-    base_asset: str
-    hedged_margin_factor: str | None = None
-    unhedged_margin_factor: str | None = None
-    mmf_factor: str | None = Field(
-        default=None, description="Margin multiplier factor for concentration risk."
-    )
-    vol_shock_params: PortfolioMarginVolShock | None = None
 
 
 class SystemConfigResult(BaseModel):
