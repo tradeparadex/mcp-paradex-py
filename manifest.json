@@ -2,7 +2,7 @@
   "manifest_version": "0.4",
   "name": "mcp-paradex",
   "display_name": "Paradex Trading",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "MCP server for Paradex — multi-asset exchange with spot, perpetuals, options, and commodity futures.",
   "long_description": "Connect AI assistants to Paradex, a privacy-preserving multi-asset exchange. Trade spot pairs, perpetual futures, dated options, and commodity/TradFi futures. Access real-time market data including orderbooks, trades, funding rates, and klines. Monitor account positions, balances, and transaction history. Place and manage orders with support for market, limit, stop, and take-profit order types. Track vault performance, positions, and transfers. Supports both read-only market data access and authenticated trading when configured with account credentials.",
   "author": {
@@ -39,7 +39,7 @@
   "tools": [
     {
       "name": "paradex_system_config",
-      "description": "Get Paradex system configuration including exchange parameters, fee schedules, and trading limits."
+      "description": "Get Paradex system configuration including exchange parameters, fee schedules, trading limits, and portfolio-margin params."
     },
     {
       "name": "paradex_system_state",
@@ -82,8 +82,8 @@
       "description": "List vaults with metadata, owner, operator, and strategy information. Supports JMESPath filtering."
     },
     {
-      "name": "paradex_vault_balance",
-      "description": "Get token balances for a specific vault."
+      "name": "paradex_vault_overview",
+      "description": "Complete vault snapshot in one call: token balances, open positions, and trading account summary."
     },
     {
       "name": "paradex_vault_summary",
@@ -94,16 +94,16 @@
       "description": "Get deposit and withdrawal transfer history for a specific vault."
     },
     {
-      "name": "paradex_vault_positions",
-      "description": "Get open positions for a specific vault."
-    },
-    {
-      "name": "paradex_vault_account_summary",
-      "description": "Get vault account summary with health, margin, and leverage details."
+      "name": "paradex_account_overview",
+      "description": "Complete live account snapshot in one call: margin health, token balances, open positions, fee tiers, and margin methodology. Requires authentication."
     },
     {
       "name": "paradex_account_summary",
       "description": "Get account summary with value, free collateral, and margin requirements. Requires authentication."
+    },
+    {
+      "name": "paradex_account_balance",
+      "description": "Get token balances for the account (USDC, DIME, etc.). Requires authentication."
     },
     {
       "name": "paradex_account_positions",
@@ -122,8 +122,28 @@
       "description": "Get account transaction history including deposits, withdrawals, and trades. Requires authentication."
     },
     {
+      "name": "paradex_account_profile",
+      "description": "Get static account profile and settings: username, referral, max-slippage limits, TAP/XP rates, notifications. Requires authentication."
+    },
+    {
+      "name": "paradex_account_keys",
+      "description": "List all credentials registered for this account: Paradex subkeys and JWT/API tokens, with their CIDR allowlists. Requires authentication."
+    },
+    {
+      "name": "paradex_generate_subkey",
+      "description": "Generate a StarkNet keypair for use as a Paradex subkey. Persists the private key locally and returns only the public key."
+    },
+    {
       "name": "paradex_open_orders",
       "description": "List currently open orders with status and fill details. Requires authentication."
+    },
+    {
+      "name": "paradex_orders_history",
+      "description": "Get historical orders for a market within a time range. Requires authentication."
+    },
+    {
+      "name": "paradex_order_status",
+      "description": "Check the status of a specific order by order ID or client ID. Requires authentication."
     },
     {
       "name": "paradex_create_order",
@@ -134,20 +154,36 @@
       "description": "Cancel orders by order ID, client ID, or all orders in a market. Requires authentication."
     },
     {
-      "name": "paradex_order_status",
-      "description": "Check the status of a specific order by order ID or client ID. Requires authentication."
+      "name": "paradex_trade_preview",
+      "description": "One-shot pre-trade analysis: readiness validation, SDK-backed margin impact (IM/MM before/after, free collateral), and fee/slippage/funding estimates. Requires authentication."
     },
     {
-      "name": "paradex_orders_history",
-      "description": "Get historical orders for a market within a time range. Requires authentication."
+      "name": "paradex_block_trade_list",
+      "description": "List block trades (with optional status/market filters), or list offers attached to a specific block_trade_id."
     },
     {
-      "name": "paradex_generate_subkey",
-      "description": "Generate a StarkNet keypair for use as a Paradex subkey. Persists the private key locally and returns only the public key."
+      "name": "paradex_block_trade_get",
+      "description": "Fetch full details for a block trade including its trades, signers, and signatures."
     },
     {
-      "name": "paradex_account_subkeys",
-      "description": "List all subkeys registered for this account. Useful for verifying key setup and auditing subkey access. Requires authentication."
+      "name": "paradex_block_trade_create_offer_based",
+      "description": "Create a new offer-based block trade with single-leg constraints (initiator-side). Signs locally; no key material leaves the process."
+    },
+    {
+      "name": "paradex_block_trade_submit_offer",
+      "description": "Submit an offer to an existing block trade as a counterparty. Signs locally."
+    },
+    {
+      "name": "paradex_block_trade_execute",
+      "description": "Execute a block trade as the initiator with selected offers (offer-based) or direct (no offers)."
+    },
+    {
+      "name": "paradex_block_trade_cancel",
+      "description": "Cancel a block trade you initiated."
+    },
+    {
+      "name": "paradex_block_trade_cancel_offer",
+      "description": "Cancel an offer you submitted against a block trade."
     }
   ],
   "user_config": {

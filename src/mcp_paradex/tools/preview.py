@@ -90,9 +90,7 @@ def _compute_margins(
         if methodology == "portfolio_margin":
             notes.append(f"portfolio_margin failed ({exc}); falling back to cross_margin.")
             try:
-                before = compute(
-                    **base_inputs.compute_kwargs(), margin_methodology="cross_margin"
-                )
+                before = compute(**base_inputs.compute_kwargs(), margin_methodology="cross_margin")
                 after = compute(
                     **what_if_inputs.compute_kwargs(), margin_methodology="cross_margin"
                 )
