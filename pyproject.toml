@@ -120,8 +120,14 @@ python-version = "3.10"
 
 [tool.uv]
 # mcp>=1.26 requires pywin32>=310 on Windows, paradex-py requires pywin32==306 via starknet-py.
-# This project targets Linux/macOS only, so we restrict the resolution environments accordingly.
-environments = ["sys_platform != 'win32'"]
+# This project targets Linux/macOS only. Enumerate platforms explicitly so uv's
+# resolver knows os_name == 'posix' and skips the `pywin32 ; os_name == "nt"`
+# branch in crypto-cpp-py (otherwise uv treats os_name and sys_platform as
+# independent and resolution fails on pywin32 version conflict).
+environments = [
+    "sys_platform == 'linux'",
+    "sys_platform == 'darwin'",
+]
 prerelease = "if-necessary-or-explicit"
 
 [tool.pytest.ini_options]

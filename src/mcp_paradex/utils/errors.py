@@ -60,7 +60,7 @@ def _extract_error(resp: Any) -> tuple[str | None, str | None]:
     if "message" in resp and ("code" in resp or "status" in resp):
         msg = resp.get("message")
         code = resp.get("code")
-        if isinstance(msg, str) and isinstance(code, (str, type(None))):
+        if isinstance(msg, str) and isinstance(code, str | None):
             return code, msg
     return None, None
 
