@@ -12,18 +12,30 @@ from typing import Annotated, Any
 
 from paradex_py.api.generated.responses import (
     AccountInfoResponse,
-    ApiToken,
+    BlockTradeConstraints,
+    BlockTradeOrder,
+    BlockTradeSignature,
+    BlockTradeStatus,
+    BlockTradeType,
     Greeks,
-    Subkey,
 )
 from paradex_py.api.generated.responses import (
     AccountSummaryResponse as AccountSummary,
+)
+from paradex_py.api.generated.responses import (
+    ApiToken as _SdkApiToken,
 )
 from paradex_py.api.generated.responses import (
     BalanceResp as Balance,
 )
 from paradex_py.api.generated.responses import (
     BBOResp as BBO,  # noqa: N814
+)
+from paradex_py.api.generated.responses import (
+    BlockTradeDetailFullResponse as BlockTrade,
+)
+from paradex_py.api.generated.responses import (
+    BlockTradeDetailResponse as BlockTradeLeg,
 )
 from paradex_py.api.generated.responses import (
     FillResult as Fill,
@@ -63,6 +75,9 @@ from paradex_py.api.generated.responses import (
 )
 from paradex_py.api.generated.responses import (
     Strategy as VaultStrategy,
+)
+from paradex_py.api.generated.responses import (
+    Subkey as _SdkSubkey,
 )
 from paradex_py.api.generated.responses import (
     TradeResult as Trade,
@@ -147,7 +162,27 @@ class PagedOrderStates(BaseModel):
     offset: int
 
 
-# Account credential model (combines two SDK types)
+# Credential models — subclass the SDK responses so the CIDR allowlist
+# (returned by the API as `allowed_cidrs` and otherwise ignored by the
+# generated SDK schema) becomes a first-class, documented field.
+class Subkey(_SdkSubkey):  # type: ignore[misc, valid-type]
+    """Paradex subkey with the CIDR allowlist surfaced as a typed field."""
+
+    allowed_cidrs: list[str] | None = Field(
+        default=None,
+        description="CIDR ranges this subkey may be used from (empty/None = no restriction).",
+    )
+
+
+class ApiToken(_SdkApiToken):  # type: ignore[misc, valid-type]
+    """API token with the CIDR allowlist surfaced as a typed field."""
+
+    allowed_cidrs: list[str] | None = Field(
+        default=None,
+        description="CIDR ranges this token may be used from (empty/None = no restriction).",
+    )
+
+
 class AccountCredentials(BaseModel):
     """All credentials registered for this account."""
 
@@ -248,6 +283,35 @@ class PreTradeCheckResult(BaseModel):
     estimates: PreTradeEstimates
     ready_to_trade: bool
     not_ready_reasons: list[str]
+
+
+class MarginSimulationResult(BaseModel):
+    """What-if margin impact of adding a hypothetical position.
+
+    All monetary values are in USDC. `before` is the account's current state;
+    `after` includes the simulated trade alongside existing positions/orders.
+    """
+
+    market_id: str
+    side: str
+    size: float
+    margin_methodology: str = Field(description="'cross_margin' or 'portfolio_margin'.")
+    initial_margin_before: float
+    initial_margin_after: float
+    initial_margin_delta: float = Field(
+        description="`after - before` IM. Positive means the trade consumes more collateral."
+    )
+    maintenance_margin_before: float
+    maintenance_margin_after: float
+    account_value: float = Field(description="Total account value used as the IM/MM budget.")
+    free_collateral_after: float = Field(
+        description="Estimated free collateral if this trade is opened (account_value - IM_after)."
+    )
+    can_open: bool = Field(description="True when free_collateral_after >= 0.")
+    notes: list[str] = Field(
+        default_factory=list,
+        description="Diagnostic notes (e.g. missing PM config fell back to cross_margin).",
+    )
 
 
 class GeneratedSubkey(BaseModel):

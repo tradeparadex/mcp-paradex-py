@@ -15,6 +15,7 @@ from paradex_py.api.api_client import ParadexApiClient
 from paradex_py.api.protocols import DefaultRetryStrategy
 
 from mcp_paradex.utils.config import config
+from mcp_paradex.utils.errors import ParadexApiError
 
 logger = logging.getLogger(__name__)
 
@@ -170,6 +171,17 @@ async def api_call(
             response = client.get(client.api_url, path, params)
             logger.info("API call url=%s completed ms=%.0f", url, (time.monotonic() - t0) * 1000)
             return response  # type: ignore[no-any-return]
+        except ParadexApiError:
+            raise
+        except httpx.HTTPStatusError as exc:
+            logger.error(
+                "API call url=%s failed ms=%.0f status=%d error=%s",
+                url,
+                (time.monotonic() - t0) * 1000,
+                exc.response.status_code,
+                exc,
+            )
+            raise ParadexApiError(str(exc), path=path, status=exc.response.status_code) from exc
         except Exception as exc:
             logger.error(
                 "API call url=%s failed ms=%.0f error=%s: %s",
@@ -178,4 +190,4 @@ async def api_call(
                 type(exc).__name__,
                 exc,
             )
-            raise
+            raise ParadexApiError(str(exc), path=path) from exc

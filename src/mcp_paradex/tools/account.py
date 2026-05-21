@@ -30,6 +30,7 @@ from mcp_paradex.models import (
 )
 from mcp_paradex.server.server import server
 from mcp_paradex.utils.ctx import ctx_info
+from mcp_paradex.utils.errors import check_response
 from mcp_paradex.utils.paradex_client import (
     api_call,
     get_authenticated_paradex_client,
@@ -162,10 +163,7 @@ async def get_account_balance(ctx: Context) -> list[Balance]:
     - Viewing DIME or other token holdings
     """
     client = await get_authenticated_paradex_client()
-    response = client.fetch_balances()
-    if "error" in response:
-        await ctx.error(response["error"])
-        raise Exception(response["error"])
+    response = await check_response(ctx, client.fetch_balances(), path="balance")
     return balance_adapter.validate_python(response["results"])
 
 
@@ -194,10 +192,7 @@ async def get_account_positions(ctx: Context) -> list[Position]:
     - Verifying entry prices and position sizes
     """
     client = await get_authenticated_paradex_client()
-    response = client.fetch_positions()
-    if "error" in response:
-        await ctx.error(response["error"])
-        raise Exception(response["error"])
+    response = await check_response(ctx, client.fetch_positions(), path="positions")
     positions = position_adapter.validate_python(response["results"])
     await ctx_info(ctx, f"Found {len(positions)} open positions", logger_name="paradex.account")
     return positions
@@ -252,12 +247,8 @@ async def get_account_overview(ctx: Context) -> AccountOverview:
         raise balances_resp
     if isinstance(positions_resp, Exception):
         raise positions_resp
-    if "error" in balances_resp:
-        await ctx.error(balances_resp["error"])
-        raise Exception(balances_resp["error"])
-    if "error" in positions_resp:
-        await ctx.error(positions_resp["error"])
-        raise Exception(positions_resp["error"])
+    balances_resp = await check_response(ctx, balances_resp, path="balance")
+    positions_resp = await check_response(ctx, positions_resp, path="positions")
 
     info: AccountInfo | None = None
     if not isinstance(info_resp, Exception):
@@ -311,10 +302,7 @@ async def get_account_fills(
     """
     client = await get_authenticated_paradex_client()
     params = {"market": market_id, "start_at": start_unix_ms, "end_at": end_unix_ms}
-    response = client.fetch_fills(params)
-    if "error" in response:
-        await ctx.error(response["error"])
-        raise Exception(response["error"])
+    response = await check_response(ctx, client.fetch_fills(params), path="fills")
     fills = fill_adapter.validate_python(response["results"])
     await ctx_info(
         ctx, f"Found {len(fills)} fills for market {market_id}", logger_name="paradex.account"
@@ -399,10 +387,7 @@ async def get_account_transactions(
         "limit": limit,
     }
     params = {k: v for k, v in params.items() if v is not None}
-    response = client.fetch_transactions(params)
-    if "error" in response:
-        await ctx.error(response["error"])
-        raise Exception(response["error"])
+    response = await check_response(ctx, client.fetch_transactions(params), path="transactions")
     transactions = transaction_adapter.validate_python(response["results"])
     await ctx_info(ctx, f"Found {len(transactions)} transactions", logger_name="paradex.account")
     return transactions
@@ -434,8 +419,11 @@ async def get_account_keys(
     - Confirm key setup before starting agent trading
 
     Returns:
-    - subkeys: Paradex keypairs registered for on-chain signing (e.g. agent keys)
-    - tokens: JWT / API key tokens for REST API access
+    - subkeys: Paradex keypairs registered for on-chain signing (e.g. agent keys).
+      Each subkey includes its `allowed_cidrs` IP allowlist when one is configured —
+      use this to audit which network ranges can use the key.
+    - tokens: JWT / API key tokens for REST API access. Each token includes its
+      `allowed_cidrs` IP allowlist when one is configured.
 
     Example use cases:
     - After registering a subkey, list keys to confirm it appears as active
@@ -573,12 +561,9 @@ async def pre_trade_check(
 
     await ctx.report_progress(1, 4, "Parsing account and position data...")
 
-    if "error" in positions_resp:
-        raise Exception(positions_resp["error"])
-    if "error" in summaries_resp:
-        raise Exception(summaries_resp["error"])
-    if "error" in markets_resp:
-        raise Exception(markets_resp["error"])
+    positions_resp = await check_response(ctx, positions_resp, path="positions")
+    summaries_resp = await check_response(ctx, summaries_resp, path="markets/summary")
+    markets_resp = await check_response(ctx, markets_resp, path="markets")
 
     account = account_summary_adapter.validate_python(account_resp)
 
@@ -592,12 +577,12 @@ async def pre_trade_check(
     summaries = market_summary_adapter.validate_python(summaries_resp["results"])
     market_summary = next((s for s in summaries if s.symbol == market_id), None)
     if market_summary is None:
-        raise Exception(f"Market {market_id} not found in summaries")
+        raise ValueError(f"Market {market_id} not found in summaries")
 
     all_markets = market_details_adapter.validate_python(markets_resp["results"])
     market_details = next((m for m in all_markets if m.symbol == market_id), None)
     if market_details is None:
-        raise Exception(f"Market {market_id} not found in market details")
+        raise ValueError(f"Market {market_id} not found in market details")
 
     # Extract actual taker fee rate from account info; fall back to default if unavailable.
     # Different asset kinds have separate fee tiers in the account's fees object.

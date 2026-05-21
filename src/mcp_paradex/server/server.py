@@ -222,12 +222,19 @@ Tool categories:
                paradex_account_profile (static: username, referral, slippage, settings)
 • Orders     — paradex_open_orders, paradex_orders_history, paradex_order_status,
                paradex_create_order, paradex_cancel_orders
-• Pre-trade  — paradex_pre_trade_check (collateral check, size validation, fee estimate)
-• Keys       — paradex_account_keys (Paradex subkeys + JWT/API tokens in one call),
+• Pre-trade  — paradex_pre_trade_check (collateral check, size validation, fee estimate),
+               paradex_margin_simulate (offline what-if margin/free-collateral impact)
+• Keys       — paradex_account_keys (Paradex subkeys + JWT/API tokens with their
+               CIDR allowlists in one call),
                paradex_generate_subkey (generate Paradex keypair locally)
 • Vaults     — paradex_vaults, paradex_vault_overview, paradex_vault_summary,
                paradex_vault_balance, paradex_vault_positions,
                paradex_vault_transfers, paradex_vault_account_summary
+• Block      — paradex_block_trade_list (blocks or per-block offers via
+  trades       block_trade_id param), paradex_block_trade_get,
+               paradex_block_trade_create_offer_based,
+               paradex_block_trade_submit_offer, paradex_block_trade_execute,
+               paradex_block_trade_cancel, paradex_block_trade_cancel_offer
 
 Start with paradex_account_overview for a full live snapshot, or
 paradex_system_state to confirm the exchange is operational.""",

@@ -27,6 +27,7 @@ from mcp_paradex.models import (
 )
 from mcp_paradex.server.server import server
 from mcp_paradex.utils.ctx import ctx_debug, ctx_info
+from mcp_paradex.utils.errors import check_response
 from mcp_paradex.utils.jmespath_utils import apply_jmespath_filter
 from mcp_paradex.utils.paradex_client import api_call, get_paradex_client
 
@@ -91,40 +92,35 @@ async def get_vaults(
     - Limit to newest vaults: "sort_by([*], &created_at)[-5:]"
     - Select specific fields: "[*].{address: address, name: name, kind: kind, status: status}"
     """
-    try:
-        client = await get_paradex_client()
-        params = {"address": vault_address} if vault_address else None
-        response = await api_call(client, "vaults", params=params)
-        if "error" in response:
-            raise Exception(response["error"])
-        vaults = vault_adapter.validate_python(response["results"])
+    client = await get_paradex_client()
+    params = {"address": vault_address} if vault_address else None
+    response = await api_call(client, "vaults", params=params)
+    response = await check_response(ctx, response, path="vaults")
+    vaults = vault_adapter.validate_python(response["results"])
 
-        if jmespath_filter:
-            await ctx_debug(
-                ctx, f"Applying JMESPath filter: {jmespath_filter}", logger_name="paradex.vaults"
-            )
-            vaults = apply_jmespath_filter(
-                data=vaults,
-                jmespath_filter=jmespath_filter,
-                type_adapter=vault_adapter,
-                error_logger=logger.error,
-            )
-        sorted_vaults = sorted(vaults, key=lambda x: x.created_at, reverse=True)
-        await ctx_info(
-            ctx,
-            f"Returning {min(limit, len(sorted_vaults))} of {len(sorted_vaults)} vaults",
-            logger_name="paradex.vaults",
+    if jmespath_filter:
+        await ctx_debug(
+            ctx, f"Applying JMESPath filter: {jmespath_filter}", logger_name="paradex.vaults"
         )
-        result_vaults = sorted_vaults[offset : offset + limit]
-        return PagedVaults(
-            results=result_vaults,
-            total=len(sorted_vaults),
-            limit=limit,
-            offset=offset,
+        vaults = apply_jmespath_filter(
+            data=vaults,
+            jmespath_filter=jmespath_filter,
+            type_adapter=vault_adapter,
+            error_logger=logger.error,
         )
-    except Exception as e:
-        logger.error(f"Error fetching vault details: {e!s}")
-        raise e
+    sorted_vaults = sorted(vaults, key=lambda x: x.created_at, reverse=True)
+    await ctx_info(
+        ctx,
+        f"Returning {min(limit, len(sorted_vaults))} of {len(sorted_vaults)} vaults",
+        logger_name="paradex.vaults",
+    )
+    result_vaults = sorted_vaults[offset : offset + limit]
+    return PagedVaults(
+        results=result_vaults,
+        total=len(sorted_vaults),
+        limit=limit,
+        offset=offset,
+    )
 
 
 vault_balance_adapter = TypeAdapter(list[VaultBalance])
@@ -150,15 +146,10 @@ async def get_vault_balance(
     before executing trades or withdrawals.
 
     """
-    try:
-        client = await get_paradex_client()
-        response = await api_call(client, "vaults/balance", params={"address": vault_address})
-        if "error" in response:
-            raise Exception(response["error"])
-        return vault_balance_adapter.validate_python(response["results"])
-    except Exception as e:
-        logger.error(f"Error fetching balance for vault {vault_address}: {e!s}")
-        raise e
+    client = await get_paradex_client()
+    response = await api_call(client, "vaults/balance", params={"address": vault_address})
+    response = await check_response(ctx, response, path="vaults/balance")
+    return vault_balance_adapter.validate_python(response["results"])
 
 
 vault_summary_adapter = TypeAdapter(list[VaultSummary])
@@ -218,42 +209,37 @@ async def get_vault_summary(
     - Filter by recent returns: "[?to_number(roi_24h) > `0.5`]"
     - Extract specific metrics: "[*].{address: address, tvl: tvl, total_roi: total_roi, volume_24h: volume_24h}"
     """
-    try:
-        client = await get_paradex_client()
-        params = {"address": vault_address} if vault_address else None
-        response = await api_call(client, "vaults/summary", params=params)
-        if "error" in response:
-            raise Exception(response["error"])
-        summary = vault_summary_adapter.validate_python(response["results"])
+    client = await get_paradex_client()
+    params = {"address": vault_address} if vault_address else None
+    response = await api_call(client, "vaults/summary", params=params)
+    response = await check_response(ctx, response, path="vaults/summary")
+    summary = vault_summary_adapter.validate_python(response["results"])
 
-        if jmespath_filter:
-            await ctx_debug(
-                ctx,
-                f"Applying JMESPath filter: {jmespath_filter}",
-                logger_name="paradex.vaults",
-            )
-            summary = apply_jmespath_filter(
-                data=summary,
-                jmespath_filter=jmespath_filter,
-                type_adapter=vault_summary_adapter,
-                error_logger=logger.error,
-            )
-        sorted_summary = sorted(summary, key=lambda x: x.address, reverse=True)
-        await ctx_info(
+    if jmespath_filter:
+        await ctx_debug(
             ctx,
-            f"Returning {min(limit, len(sorted_summary))} of {len(sorted_summary)} vault summaries",
+            f"Applying JMESPath filter: {jmespath_filter}",
             logger_name="paradex.vaults",
         )
-        result_summary = sorted_summary[offset : offset + limit]
-        return PagedVaultSummaries(
-            results=result_summary,
-            total=len(sorted_summary),
-            limit=limit,
-            offset=offset,
+        summary = apply_jmespath_filter(
+            data=summary,
+            jmespath_filter=jmespath_filter,
+            type_adapter=vault_summary_adapter,
+            error_logger=logger.error,
         )
-    except Exception as e:
-        logger.error(f"Error fetching summary for vault {vault_address}: {e!s}")
-        raise e
+    sorted_summary = sorted(summary, key=lambda x: x.address, reverse=True)
+    await ctx_info(
+        ctx,
+        f"Returning {min(limit, len(sorted_summary))} of {len(sorted_summary)} vault summaries",
+        logger_name="paradex.vaults",
+    )
+    result_summary = sorted_summary[offset : offset + limit]
+    return PagedVaultSummaries(
+        results=result_summary,
+        total=len(sorted_summary),
+        limit=limit,
+        offset=offset,
+    )
 
 
 @server.tool(
@@ -287,13 +273,10 @@ async def get_vault_transfers(
     - Verifying the total amount deposited over time
     - Analyzing deposit/withdrawal patterns for strategy insights
     """
-    try:
-        client = await get_paradex_client()
-        response = await api_call(client, "vaults/transfers", params={"address": vault_address})
-        return response["results"]  # type: ignore[no-any-return]
-    except Exception as e:
-        logger.error(f"Error fetching transfers for vault {vault_address}: {e!s}")
-        raise e
+    client = await get_paradex_client()
+    response = await api_call(client, "vaults/transfers", params={"address": vault_address})
+    response = await check_response(ctx, response, path="vaults/transfers")
+    return response["results"]  # type: ignore[no-any-return]
 
 
 position_adapter = TypeAdapter(list[Position])
@@ -330,13 +313,10 @@ async def get_vault_positions(
     - Comparing performance across different markets
     - Planning adjustments to position sizes or leverage
     """
-    try:
-        client = await get_paradex_client()
-        response = await api_call(client, "vaults/positions", params={"address": vault_address})
-        return position_adapter.validate_python(response["results"])
-    except Exception as e:
-        logger.error(f"Error fetching positions for vault {vault_address}: {e!s}")
-        raise e
+    client = await get_paradex_client()
+    response = await api_call(client, "vaults/positions", params={"address": vault_address})
+    response = await check_response(ctx, response, path="vaults/positions")
+    return position_adapter.validate_python(response["results"])
 
 
 vault_account_summary_adapter = TypeAdapter(list[VaultAccountSummary])
@@ -376,12 +356,9 @@ async def get_vault_overview(
         client, "vaults/account-summary", params={"address": vault_address}
     )
 
-    if "error" in balance_resp:
-        raise Exception(balance_resp["error"])
-    if "error" in positions_resp:
-        raise Exception(positions_resp["error"])
-    if "error" in account_resp:
-        raise Exception(account_resp["error"])
+    balance_resp = await check_response(ctx, balance_resp, path="vaults/balance")
+    positions_resp = await check_response(ctx, positions_resp, path="vaults/positions")
+    account_resp = await check_response(ctx, account_resp, path="vaults/account-summary")
 
     return VaultOverview(
         balances=vault_balance_adapter.validate_python(balance_resp["results"]),
@@ -421,14 +398,7 @@ async def get_vault_account_summary(
     - Understanding maintenance margin requirements
     - Planning position adjustments based on account metrics
     """
-    try:
-        client = await get_paradex_client()
-        response = await api_call(
-            client, "vaults/account-summary", params={"address": vault_address}
-        )
-        if "error" in response:
-            raise Exception(response["error"])
-        return vault_account_summary_adapter.validate_python(response["results"])
-    except Exception as e:
-        logger.error(f"Error fetching account summary for vault {vault_address}: {e!s}")
-        raise e
+    client = await get_paradex_client()
+    response = await api_call(client, "vaults/account-summary", params={"address": vault_address})
+    response = await check_response(ctx, response, path="vaults/account-summary")
+    return vault_account_summary_adapter.validate_python(response["results"])
