@@ -130,6 +130,14 @@ environments = [
 ]
 prerelease = "if-necessary-or-explicit"
 
+# crypto-cpp-py 1.4.5 (pinned by starknet-py 0.28.x, which paradex-py 0.6.0
+# requires) declares `ecdsa==0.18.0`. ecdsa 0.18.0 has GHSA-wj6h-64fc-37mp
+# (Minerva timing attack on P-256). The fix landed in 0.19.0. The public ecdsa
+# API is unchanged across 0.18→0.19, so overriding the transitive pin is safe.
+# Drop this override once paradex-py adopts starknet-py >=0.29 (and the newer
+# crypto-cpp-py that ships with it).
+override-dependencies = ["ecdsa>=0.19.2"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"
