@@ -619,7 +619,8 @@ async def test_order_status_by_client_id(auth_client):
 
 
 # ---------------------------------------------------------------------------
-# Pre-trade check tool
+# Trade preview tool (paradex_trade_preview)
+# Combined readiness + SDK-backed margin/fee impact.
 # ---------------------------------------------------------------------------
 
 # Fee rates by asset kind used in mock responses below.
@@ -632,20 +633,35 @@ _FEES_ALL_KINDS = {
     }
 }
 
+# Cross-margin params required by paradex_py.margin.compute(). The hand-rolled
+# margin math didn't need these, but the SDK calculator validates them.
+_DELTA1_CROSS_MARGIN_PARAMS = {
+    "imf_base": "0.05",
+    "imf_factor": "0",
+    "imf_shift": "0",
+    "mmf_factor": "0.5",
+}
 
-def _setup_pre_trade_mocks(auth_client, market_record, fees=_FEES_ALL_KINDS):
+
+def _setup_trade_preview_mocks(auth_client, market_record, fees=_FEES_ALL_KINDS):
     auth_client.get.return_value = ACCOUNT_RESPONSE
     auth_client.fetch_positions.return_value = {"results": []}
+    auth_client.fetch_orders.return_value = {"results": []}
+    auth_client.fetch_balances.return_value = {"results": [{"token": "USDC", "size": "10000"}]}
     auth_client.fetch_markets_summary.return_value = {"results": [SUMMARY_RECORD]}
-    auth_client.fetch_markets.return_value = {"results": [market_record]}
+    auth_client.fetch_markets.return_value = {
+        "results": [{**market_record, "delta1_cross_margin_params": _DELTA1_CROSS_MARGIN_PARAMS}]
+    }
     auth_client.fetch_account_info.return_value = fees
+    # PM config unavailable in tests — calculator falls back to cross_margin.
+    auth_client.fetch_portfolio_margin_config.side_effect = Exception("no pm config in test")
 
 
-async def test_pre_trade_check_ready_to_trade(auth_client, no_ctx_progress):
-    _setup_pre_trade_mocks(auth_client, MARKET_RECORD)
+async def test_trade_preview_ready_to_trade(auth_client, no_ctx_progress):
+    _setup_trade_preview_mocks(auth_client, MARKET_RECORD)
 
     result = await server.call_tool(
-        "paradex_pre_trade_check",
+        "paradex_trade_preview",
         {"market_id": "BTC-USD-PERP", "side": "BUY", "size": 1.0},
     )
     data = _json(result)
@@ -654,6 +670,11 @@ async def test_pre_trade_check_ready_to_trade(auth_client, no_ctx_progress):
     assert data["not_ready_reasons"] == []
     assert data["account_status"] == "ACTIVE"
     assert data["market_id"] == "BTC-USD-PERP"
+    # Margin block must be populated from the SDK calculator.
+    assert data["margin"]["methodology"] == "cross_margin"
+    assert data["margin"]["initial_margin_after"] > data["margin"]["initial_margin_before"]
+    assert data["margin"]["initial_margin_delta"] > 0
+    assert data["margin"]["free_collateral_after"] < data["margin"]["account_value"]
 
 
 @pytest.mark.parametrize(
@@ -661,7 +682,7 @@ async def test_pre_trade_check_ready_to_trade(auth_client, no_ctx_progress):
     [
         # PERP → taker_rate (0.0010)
         ("PERP", round(1.0 * 95001.0 * 0.0010, 4)),
-        # SPOT → spot_taker_rate (0.0020)
+        # SPOT → spot_taker_rate (0.0020) via SDK fee_rate_for_market
         ("SPOT", round(1.0 * 95001.0 * 0.0020, 4)),
         # OPTION (dated) → dated_option_taker_rate (0.0005)
         ("OPTION", round(1.0 * 95001.0 * 0.0005, 4)),
@@ -671,14 +692,14 @@ async def test_pre_trade_check_ready_to_trade(auth_client, no_ctx_progress):
         ("FUTURE", round(1.0 * 95001.0 * 0.0010, 4)),
     ],
 )
-async def test_pre_trade_check_fee_rate_by_asset_kind(
+async def test_trade_preview_fee_rate_by_asset_kind(
     auth_client, no_ctx_progress, asset_kind, expected_fee
 ):
     market_record = {**MARKET_RECORD, "asset_kind": asset_kind}
-    _setup_pre_trade_mocks(auth_client, market_record)
+    _setup_trade_preview_mocks(auth_client, market_record)
 
     result = await server.call_tool(
-        "paradex_pre_trade_check",
+        "paradex_trade_preview",
         {"market_id": "BTC-USD-PERP", "side": "BUY", "size": 1.0},
     )
     data = _json(result)
@@ -686,16 +707,16 @@ async def test_pre_trade_check_fee_rate_by_asset_kind(
     assert data["estimates"]["estimated_fee_usdc"] == expected_fee
 
 
-async def test_pre_trade_check_falls_back_to_taker_rate_when_specific_fee_absent(
+async def test_trade_preview_falls_back_to_taker_rate_when_specific_fee_absent(
     auth_client, no_ctx_progress
 ):
     """When the asset-specific fee field is absent, falls back to generic taker_rate."""
     market_record = {**MARKET_RECORD, "asset_kind": "SPOT"}
     # spot_taker_rate deliberately omitted
-    _setup_pre_trade_mocks(auth_client, market_record, fees={"fees": {"taker_rate": "0.0010"}})
+    _setup_trade_preview_mocks(auth_client, market_record, fees={"fees": {"taker_rate": "0.0010"}})
 
     result = await server.call_tool(
-        "paradex_pre_trade_check",
+        "paradex_trade_preview",
         {"market_id": "BTC-USD-PERP", "side": "BUY", "size": 1.0},
     )
     data = _json(result)
@@ -703,16 +724,13 @@ async def test_pre_trade_check_falls_back_to_taker_rate_when_specific_fee_absent
     assert data["estimates"]["estimated_fee_usdc"] == round(1.0 * 95001.0 * 0.0010, 4)
 
 
-async def test_pre_trade_check_with_existing_position(auth_client, no_ctx_progress):
+async def test_trade_preview_with_existing_position(auth_client, no_ctx_progress):
     """Existing position unrealized PnL is reflected in estimates."""
-    auth_client.get.return_value = ACCOUNT_RESPONSE
+    _setup_trade_preview_mocks(auth_client, MARKET_RECORD)
     auth_client.fetch_positions.return_value = {"results": [POSITION_RECORD]}
-    auth_client.fetch_markets_summary.return_value = {"results": [SUMMARY_RECORD]}
-    auth_client.fetch_markets.return_value = {"results": [MARKET_RECORD]}
-    auth_client.fetch_account_info.return_value = _FEES_ALL_KINDS
 
     result = await server.call_tool(
-        "paradex_pre_trade_check",
+        "paradex_trade_preview",
         {"market_id": "BTC-USD-PERP", "side": "BUY", "size": 1.0},
     )
     data = _json(result)
@@ -1061,20 +1079,6 @@ async def test_vaults_returns_results(mock_client, no_ctx_progress):
     mock_client.get.assert_called_once_with(mock_client.api_url, "vaults", None)
 
 
-async def test_vault_balance_returns_balances(mock_client):
-    mock_client.get.return_value = {"results": [VAULT_BALANCE_RECORD]}
-
-    result = await server.call_tool("paradex_vault_balance", {"vault_address": "0xvault1"})
-    balances = result[1]["result"]
-
-    assert len(balances) == 1
-    assert balances[0]["token"] == "USDC"
-    assert balances[0]["size"] == "50000.0"
-    mock_client.get.assert_called_once_with(
-        mock_client.api_url, "vaults/balance", {"address": "0xvault1"}
-    )
-
-
 async def test_vault_summary_returns_results(mock_client, no_ctx_progress):
     mock_client.get.return_value = {"results": [VAULT_SUMMARY_RECORD]}
 
@@ -1085,19 +1089,6 @@ async def test_vault_summary_returns_results(mock_client, no_ctx_progress):
     assert data["results"][0]["address"] == "0xvault1"
     mock_client.get.assert_called_once_with(
         mock_client.api_url, "vaults/summary", {"address": "0xvault1"}
-    )
-
-
-async def test_vault_account_summary_returns_results(mock_client):
-    mock_client.get.return_value = {"results": [VAULT_ACCOUNT_SUMMARY_RECORD]}
-
-    result = await server.call_tool("paradex_vault_account_summary", {"vault_address": "0xvault1"})
-    summaries = result[1]["result"]
-
-    assert len(summaries) == 1
-    assert summaries[0]["address"] == "0xvault1"
-    mock_client.get.assert_called_once_with(
-        mock_client.api_url, "vaults/account-summary", {"address": "0xvault1"}
     )
 
 

@@ -269,33 +269,10 @@ class PreTradeEstimates(BaseModel):
     )
 
 
-class PreTradeCheckResult(BaseModel):
-    """Result of a pre-trade readiness check for a specific market and order size."""
+class TradePreviewMargin(BaseModel):
+    """SDK-computed margin impact (USDC) of a hypothetical trade."""
 
-    market_id: str
-    side: str
-    size: float
-    account_status: str
-    free_collateral: str
-    current_position: Position | None
-    bbo: PreTradeBBO
-    market_constraints: PreTradeMarketConstraints
-    estimates: PreTradeEstimates
-    ready_to_trade: bool
-    not_ready_reasons: list[str]
-
-
-class MarginSimulationResult(BaseModel):
-    """What-if margin impact of adding a hypothetical position.
-
-    All monetary values are in USDC. `before` is the account's current state;
-    `after` includes the simulated trade alongside existing positions/orders.
-    """
-
-    market_id: str
-    side: str
-    size: float
-    margin_methodology: str = Field(description="'cross_margin' or 'portfolio_margin'.")
+    methodology: str = Field(description="'cross_margin' or 'portfolio_margin'.")
     initial_margin_before: float
     initial_margin_after: float
     initial_margin_delta: float = Field(
@@ -304,13 +281,39 @@ class MarginSimulationResult(BaseModel):
     maintenance_margin_before: float
     maintenance_margin_after: float
     account_value: float = Field(description="Total account value used as the IM/MM budget.")
+    free_collateral_before: float
     free_collateral_after: float = Field(
-        description="Estimated free collateral if this trade is opened (account_value - IM_after)."
+        description="Estimated free collateral after opening the trade (account_value - IM_after)."
     )
-    can_open: bool = Field(description="True when free_collateral_after >= 0.")
+
+
+class TradePreviewResult(BaseModel):
+    """Combined pre-trade validation + SDK-backed margin/fee impact.
+
+    Validates account/market readiness, runs the live margin calculator with
+    and without the proposed position, and estimates fee/slippage/funding cost
+    using market specs and account fee tiers.
+    """
+
+    market_id: str
+    side: str
+    size: float
+    account_status: str
+    current_position: Position | None
+    bbo: PreTradeBBO
+    market_constraints: PreTradeMarketConstraints
+    margin: TradePreviewMargin
+    estimates: PreTradeEstimates
+    ready_to_trade: bool = Field(
+        description=(
+            "True when account is ACTIVE, size is within market limits, and "
+            "free_collateral_after is non-negative."
+        )
+    )
+    not_ready_reasons: list[str]
     notes: list[str] = Field(
         default_factory=list,
-        description="Diagnostic notes (e.g. missing PM config fell back to cross_margin).",
+        description="Diagnostic notes (e.g. PM config unavailable, fell back to cross_margin).",
     )
 
 
