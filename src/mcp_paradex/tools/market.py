@@ -26,6 +26,7 @@ from mcp_paradex.models import (
 )
 from mcp_paradex.server.server import server
 from mcp_paradex.utils.ctx import ctx_debug, ctx_info
+from mcp_paradex.utils.errors import check_response
 from mcp_paradex.utils.jmespath_utils import apply_jmespath_filter
 from mcp_paradex.utils.paradex_client import api_call, get_paradex_client
 
@@ -137,43 +138,35 @@ async def get_markets(
     - Sort by 24h volume: "sort_by([*], &volume_24h)"
     - Limit to top 5 by volume: "[sort_by([*], &to_number(volume_24h))[-5:]]"
     """
-    try:
-        client = await get_paradex_client()
+    client = await get_paradex_client()
+    response = await check_response(ctx, client.fetch_markets(), path="markets")
+    details = market_details_adapter.validate_python(response["results"])
+    if market_ids and "ALL" not in market_ids:
+        details = [detail for detail in details if detail.symbol in market_ids]
 
-        response = client.fetch_markets()
-        if "error" in response:
-            await ctx.error(response["error"])
-            raise Exception(response["error"])
-        details = market_details_adapter.validate_python(response["results"])
-        if market_ids and "ALL" not in market_ids:
-            details = [detail for detail in details if detail.symbol in market_ids]
-
-        if jmespath_filter:
-            await ctx_debug(
-                ctx, f"Applying JMESPath filter: {jmespath_filter}", logger_name="paradex.markets"
-            )
-            details = apply_jmespath_filter(
-                data=details,
-                jmespath_filter=jmespath_filter,
-                type_adapter=market_details_adapter,
-                error_logger=logger.error,
-            )
-        sorted_details = sorted(details, key=lambda x: x.symbol, reverse=True)
-        await ctx_info(
-            ctx,
-            f"Returning {min(limit, len(sorted_details))} of {len(sorted_details)} markets",
-            logger_name="paradex.markets",
+    if jmespath_filter:
+        await ctx_debug(
+            ctx, f"Applying JMESPath filter: {jmespath_filter}", logger_name="paradex.markets"
         )
-        result_details = sorted_details[offset : offset + limit]
-        return PagedMarketDetails(
-            results=result_details,
-            total=len(sorted_details),
-            limit=limit,
-            offset=offset,
+        details = apply_jmespath_filter(
+            data=details,
+            jmespath_filter=jmespath_filter,
+            type_adapter=market_details_adapter,
+            error_logger=logger.error,
         )
-    except Exception as e:
-        await ctx.error(f"Error fetching market details: {e!s}")
-        raise e
+    sorted_details = sorted(details, key=lambda x: x.symbol, reverse=True)
+    await ctx_info(
+        ctx,
+        f"Returning {min(limit, len(sorted_details))} of {len(sorted_details)} markets",
+        logger_name="paradex.markets",
+    )
+    result_details = sorted_details[offset : offset + limit]
+    return PagedMarketDetails(
+        results=result_details,
+        total=len(sorted_details),
+        limit=limit,
+        offset=offset,
+    )
 
 
 market_summary_adapter = TypeAdapter(list[MarketSummary])
@@ -247,47 +240,43 @@ async def get_market_summaries(
     - Sort by volume: "sort_by([*], &volume)"
     - Get top 3 by price change: "[sort_by([*], &to_number(price_change_percent))[-3:]]"
     """
-    try:
-        client = await get_paradex_client()
-        response = client.fetch_markets_summary(params={"market": "ALL"})
-        if "error" in response:
-            await ctx.error(response["error"])
-            raise Exception(response["error"])
+    client = await get_paradex_client()
+    response = await check_response(
+        ctx,
+        client.fetch_markets_summary(params={"market": "ALL"}),
+        path="markets/summary",
+    )
 
-        summaries = market_summary_adapter.validate_python(response["results"])
+    summaries = market_summary_adapter.validate_python(response["results"])
 
-        if market_ids and "ALL" not in market_ids:
-            summaries = [summary for summary in summaries if summary.symbol in market_ids]
+    if market_ids and "ALL" not in market_ids:
+        summaries = [summary for summary in summaries if summary.symbol in market_ids]
 
-        if jmespath_filter:
-            await ctx_debug(
-                ctx,
-                f"Applying JMESPath filter: {jmespath_filter}",
-                logger_name="paradex.markets",
-            )
-            summaries = apply_jmespath_filter(
-                data=summaries,
-                jmespath_filter=jmespath_filter,
-                type_adapter=market_summary_adapter,
-                error_logger=logger.error,
-            )
-        sorted_summaries = sorted(summaries, key=lambda x: x.symbol, reverse=True)
-        await ctx_info(
+    if jmespath_filter:
+        await ctx_debug(
             ctx,
-            f"Returning {min(limit, len(sorted_summaries))} of {len(sorted_summaries)} market summaries",
+            f"Applying JMESPath filter: {jmespath_filter}",
             logger_name="paradex.markets",
         )
-        result_summaries = sorted_summaries[offset : offset + limit]
-        return PagedMarketSummaries(
-            results=result_summaries,
-            total=len(sorted_summaries),
-            limit=limit,
-            offset=offset,
+        summaries = apply_jmespath_filter(
+            data=summaries,
+            jmespath_filter=jmespath_filter,
+            type_adapter=market_summary_adapter,
+            error_logger=logger.error,
         )
-    except Exception as e:
-        logger.error(f"Error fetching market summaries: {e!s}")
-        await ctx.error(f"Error fetching market summaries: {e!s}")
-        raise e
+    sorted_summaries = sorted(summaries, key=lambda x: x.symbol, reverse=True)
+    await ctx_info(
+        ctx,
+        f"Returning {min(limit, len(sorted_summaries))} of {len(sorted_summaries)} market summaries",
+        logger_name="paradex.markets",
+    )
+    result_summaries = sorted_summaries[offset : offset + limit]
+    return PagedMarketSummaries(
+        results=result_summaries,
+        total=len(sorted_summaries),
+        limit=limit,
+        offset=offset,
+    )
 
 
 funding_data_adapter = TypeAdapter(list[FundingData])
@@ -322,18 +311,15 @@ async def get_funding_data(
     - Comparing funding rates across different assets for relative value trades
     - Analyzing funding rate volatility to predict potential rate changes
     """
-    try:
-        client = await get_paradex_client()
-        response = client.fetch_funding_data(
+    client = await get_paradex_client()
+    response = await check_response(
+        ctx,
+        client.fetch_funding_data(
             params={"market": market_id, "start_at": start_unix_ms, "end_at": end_unix_ms}
-        )
-        if "error" in response:
-            await ctx.error(response["error"])
-            raise Exception(response["error"])
-        return funding_data_adapter.validate_python(response["results"])
-    except Exception as e:
-        await ctx.error(f"Error fetching funding data for {market_id}: {e!s}")
-        raise e
+        ),
+        path="funding/data",
+    )
+    return funding_data_adapter.validate_python(response["results"])
 
 
 class OrderbookDepth(int, Enum):
@@ -377,13 +363,9 @@ async def get_orderbook(
     - Identifying large resting orders that might act as support/resistance
     - Detecting order book imbalances that could predict short-term price moves
     """
-    try:
-        client = await get_paradex_client()
-        response = client.fetch_orderbook(market_id, params={"depth": depth})
-        return response  # type: ignore[no-any-return]
-    except Exception as e:
-        await ctx.error(f"Error fetching orderbook for {market_id}: {e!s}")
-        raise e
+    client = await get_paradex_client()
+    response = client.fetch_orderbook(market_id, params={"depth": depth})
+    return await check_response(ctx, response, path=f"orderbook/{market_id}")  # type: ignore[no-any-return]
 
 
 KLinesResolutionEnum = Literal[1, 3, 5, 15, 30, 60]
@@ -437,35 +419,30 @@ async def get_klines(
     - Finding significant price levels from historical support/resistance
     - Measuring volume patterns to confirm price movements
     """
-    try:
-        client = await get_paradex_client()
-        response = await api_call(
-            client,
-            "markets/klines",
-            params={
-                "symbol": market_id,
-                "resolution": str(resolution),
-                "start_at": start_unix_ms,
-                "end_at": end_unix_ms,
-            },
+    client = await get_paradex_client()
+    response = await api_call(
+        client,
+        "markets/klines",
+        params={
+            "symbol": market_id,
+            "resolution": str(resolution),
+            "start_at": start_unix_ms,
+            "end_at": end_unix_ms,
+        },
+    )
+    response = await check_response(ctx, response, path="markets/klines")
+    results = response["results"]
+    return [
+        OHLCV(
+            timestamp=result[0],
+            open=result[1],
+            high=result[2],
+            low=result[3],
+            close=result[4],
+            volume=result[5],
         )
-        if "error" in response:
-            raise Exception(response["error"])
-        results = response["results"]
-        return [
-            OHLCV(
-                timestamp=result[0],
-                open=result[1],
-                high=result[2],
-                low=result[3],
-                close=result[4],
-                volume=result[5],
-            )
-            for result in results
-        ]
-    except Exception as e:
-        await ctx.error(f"Error fetching klines for {market_id}: {e!s}")
-        raise e
+        for result in results
+    ]
 
 
 trade_adapter = TypeAdapter(list[Trade])
@@ -502,17 +479,15 @@ async def get_trades(
     - Understanding trade frequency as an indicator of market interest
     - Comparing executed prices to orderbook mid-price for market impact analysis
     """
-    try:
-        client = await get_paradex_client()
-        response = client.fetch_trades(
+    client = await get_paradex_client()
+    response = await check_response(
+        ctx,
+        client.fetch_trades(
             params={"market": market_id, "start_at": start_unix_ms, "end_at": end_unix_ms}
-        )
-        if "error" in response:
-            raise Exception(response["error"])
-        return trade_adapter.validate_python(response["results"])
-    except Exception as e:
-        await ctx.error(f"Error fetching trades for {market_id}: {e!s}")
-        raise e
+        ),
+        path="trades",
+    )
+    return trade_adapter.validate_python(response["results"])
 
 
 @server.tool(
@@ -544,10 +519,6 @@ async def get_bbo(
     - Calculating mid-price for order placement strategies
     - Setting appropriate limit order prices to improve fill chances
     """
-    try:
-        client = await get_paradex_client()
-        response = client.fetch_bbo(market_id)
-        return BBO(**response)
-    except Exception as e:
-        await ctx.error(f"Error fetching BBO for {market_id}: {e!s}")
-        raise e
+    client = await get_paradex_client()
+    response = await check_response(ctx, client.fetch_bbo(market_id), path=f"bbo/{market_id}")
+    return BBO(**response)

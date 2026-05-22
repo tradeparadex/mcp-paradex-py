@@ -8,7 +8,6 @@ global parameters that affect trading operations.
 """
 
 import asyncio
-import logging
 
 from mcp.server.fastmcp.server import Context
 from mcp.types import ToolAnnotations
@@ -17,8 +16,6 @@ from mcp_paradex.models import PortfolioMarginAssetConfig, SystemConfigResult, S
 from mcp_paradex.server.server import server
 from mcp_paradex.utils.ctx import ctx_info
 from mcp_paradex.utils.paradex_client import api_call, get_paradex_client
-
-logger = logging.getLogger(__name__)
 
 
 @server.tool(
@@ -45,19 +42,15 @@ async def get_system_config(ctx: Context) -> SystemConfigResult:
     - Verifying maximum leverage available for specific markets
     - Reviewing portfolio margin risk factors before switching margin methodology
     """
-    try:
-        client = await get_paradex_client()
-        config_resp, pm_resp = await asyncio.gather(
-            api_call(client, "system/config"),
-            api_call(client, "system/portfolio-margin-config"),
-        )
-        pm_items = [
-            PortfolioMarginAssetConfig.model_validate(item) for item in pm_resp.get("results", [])
-        ]
-        return SystemConfigResult(config=config_resp, portfolio_margin=pm_items)
-    except Exception as e:
-        await ctx.error(f"Error fetching system configuration: {e!s}")
-        raise e
+    client = await get_paradex_client()
+    config_resp, pm_resp = await asyncio.gather(
+        api_call(client, "system/config"),
+        api_call(client, "system/portfolio-margin-config"),
+    )
+    pm_items = [
+        PortfolioMarginAssetConfig.model_validate(item) for item in pm_resp.get("results", [])
+    ]
+    return SystemConfigResult(config=config_resp, portfolio_margin=pm_items)
 
 
 @server.tool(
@@ -84,12 +77,8 @@ async def get_system_state(ctx: Context) -> SystemState:
     - Confirming exchange status during periods of market volatility
     - Diagnosing API issues by checking system health
     """
-    try:
-        client = await get_paradex_client()
-        state = client.fetch_system_state()
-        time = client.fetch_system_time()
-        await ctx_info(ctx, f"System status: {state['status']}", logger_name="paradex.system")
-        return SystemState(status=state["status"], timestamp=time["server_time"])
-    except Exception as e:
-        await ctx.error(f"Error fetching system state: {e!s}")
-        raise e
+    client = await get_paradex_client()
+    state = client.fetch_system_state()
+    time = client.fetch_system_time()
+    await ctx_info(ctx, f"System status: {state['status']}", logger_name="paradex.system")
+    return SystemState(status=state["status"], timestamp=time["server_time"])

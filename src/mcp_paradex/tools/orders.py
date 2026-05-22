@@ -19,6 +19,7 @@ from mcp_paradex.models import (
 )
 from mcp_paradex.server.server import server
 from mcp_paradex.utils.ctx import ctx_info
+from mcp_paradex.utils.errors import check_response
 from mcp_paradex.utils.paradex_client import get_authenticated_paradex_client
 
 order_state_adapter = TypeAdapter(list[OrderState])
@@ -70,10 +71,7 @@ async def get_open_orders(
     """
     client = await get_authenticated_paradex_client()
     params = {"market": market_id} if market_id != "" and market_id != "ALL" else None
-    response = client.fetch_orders(params=params)
-    if "error" in response:
-        await ctx.error(f"Error fetching open orders: {response['error']}")
-        raise Exception(response["error"])
+    response = await check_response(ctx, client.fetch_orders(params=params), path="orders")
     orders = order_state_adapter.validate_python(response["results"])
     sorted_orders = sorted(orders, key=lambda x: x.created_at)
     await ctx_info(
@@ -239,7 +237,7 @@ async def get_order_status(
     elif client_id:
         response = client.fetch_order_by_client_id(client_id)
     else:
-        raise Exception("Either order_id or client_id must be provided.")
+        raise ValueError("Either order_id or client_id must be provided.")
     return OrderState.model_validate(response)
 
 
@@ -263,9 +261,8 @@ async def get_orders_history(
     client = await get_authenticated_paradex_client()
     params: dict[str, Any] = {"market": market_id, "start_at": start_unix_ms, "end_at": end_unix_ms}
     params = {k: v for k, v in params.items() if v is not None}
-    response = client.fetch_orders_history(params=params)
-    if "error" in response:
-        await ctx.error(response["error"])
-        raise Exception(response["error"])
+    response = await check_response(
+        ctx, client.fetch_orders_history(params=params), path="orders/history"
+    )
     orders_raw: list[dict[str, Any]] = response["results"]
     return order_state_adapter.validate_python(orders_raw)

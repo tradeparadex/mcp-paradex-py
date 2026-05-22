@@ -98,7 +98,7 @@ def test_api_call_span_noop_without_otel(monkeypatch):
 
     import asyncio
 
-    result = asyncio.get_event_loop().run_until_complete(
+    result = asyncio.new_event_loop().run_until_complete(
         client_module.api_call(mock_client, "markets")
     )
     assert result == {"results": []}

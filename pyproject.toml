@@ -20,17 +20,17 @@ classifiers = [
 ]
 
 dependencies = [
-    "mcp[cli]>=1.26.0",
-    "paradex-py>=0.5.6",
-    "pydantic>=2.11.0",
-    "uvicorn>=0.35.0",
+    "mcp[cli]>=1.27.1",
+    "paradex-py>=0.6.0",
+    "pydantic>=2.13.4",
+    "uvicorn>=0.47.0",
     "python-dotenv>=1.0.1",
-    "aiohttp>=3.12.0",
+    "aiohttp>=3.13.5",
     "jmespath>=1.0.1",
     "typing-extensions>=4.13.0",
-    "opentelemetry-sdk>=1.27.0",
-    "opentelemetry-exporter-otlp-proto-http>=1.27.0",
-    "opentelemetry-instrumentation-asgi>=0.48b0",
+    "opentelemetry-sdk>=1.42.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.42.0",
+    "opentelemetry-instrumentation-asgi>=0.63b0",
 ]
 
 [project.urls]
@@ -120,9 +120,23 @@ python-version = "3.10"
 
 [tool.uv]
 # mcp>=1.26 requires pywin32>=310 on Windows, paradex-py requires pywin32==306 via starknet-py.
-# This project targets Linux/macOS only, so we restrict the resolution environments accordingly.
-environments = ["sys_platform != 'win32'"]
+# This project targets Linux/macOS only. Enumerate platforms explicitly so uv's
+# resolver knows os_name == 'posix' and skips the `pywin32 ; os_name == "nt"`
+# branch in crypto-cpp-py (otherwise uv treats os_name and sys_platform as
+# independent and resolution fails on pywin32 version conflict).
+environments = [
+    "sys_platform == 'linux'",
+    "sys_platform == 'darwin'",
+]
 prerelease = "if-necessary-or-explicit"
+
+# crypto-cpp-py 1.4.5 (pinned by starknet-py 0.28.x, which paradex-py 0.6.0
+# requires) declares `ecdsa==0.18.0`. ecdsa 0.18.0 has GHSA-wj6h-64fc-37mp
+# (Minerva timing attack on P-256). The fix landed in 0.19.0. The public ecdsa
+# API is unchanged across 0.18→0.19, so overriding the transitive pin is safe.
+# Drop this override once paradex-py adopts starknet-py >=0.29 (and the newer
+# crypto-cpp-py that ships with it).
+override-dependencies = ["ecdsa>=0.19.2"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
